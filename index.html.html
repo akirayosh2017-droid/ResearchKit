@@ -1,0 +1,2778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ResearchKit — Usability Study Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* Warm paper neutrals — ivory/sand instead of sterile white/grey */
+    --paper:#F7EFDF; --panel:#FFFBF3; --line:#E3D3AE; --ink:#2B2116; --muted:#7A6C55; --faint:#A99A7C;
+
+    /* Peacock teal — primary brand / interactive accent */
+    --pine-50:#E3F1EE; --pine-100:#C3E1DC; --pine-300:#4FA79D; --pine-500:#0E7C7B; --pine-600:#0B6362; --pine-700:#0A4E4E;
+
+    /* Marigold — warm secondary accent ("OK" states, warmth) */
+    --amber-100:#FBE9C6; --amber-500:#E2A32D; --amber-600:#B97F1C;
+
+    /* Vermilion — danger / "needs attention" accent */
+    --rose-100:#FADAD0; --rose-500:#C34A25;
+
+    /* Extra festival accents used sparingly for variety (tags, group icon tints, charts) */
+    --purple-50:#F0E6F3; --purple-500:#6B2D8C; --purple-700:#4A1F63;
+    --emerald-50:#DEF0E2; --emerald-500:#1E8A56; --emerald-700:#146540;
+    --pink-50:#FBE3EC; --pink-500:#D14C82;
+    --gold:#B08D2E; --brass:#9C7A3F;
+
+    --font-display:'Baloo 2', 'Segoe UI', sans-serif;
+    --font-sans:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  /* Dark mode — same warm, non-sterile philosophy: deep espresso-brown instead
+     of neutral black/grey. Only the neutral surface tokens change; the brand
+     and semantic accent colours stay vivid so they still read as accents. */
+  html[data-theme="dark"]{
+    --paper:#1E1811; --panel:#2A2116; --line:#4A3C29; --ink:#F2E8D6; --muted:#C6B392; --faint:#8C7A5C;
+  }
+  html[data-theme="dark"] ::-webkit-scrollbar-thumb{ background:#5A4B34; }
+  html[data-theme="dark"] *{ scrollbar-color:#5A4B34 transparent; }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; }
+  body{ font-family:var(--font-sans); background:var(--paper); color:var(--ink); font-size:14px; transition:background-color .2s, color .2s; }
+  ::-webkit-scrollbar{ width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb{ background:#D9C7A0; border-radius:8px; }
+  *{ scrollbar-width:thin; scrollbar-color:#D9C7A0 transparent; }
+  button{ font-family:inherit; cursor:pointer; }
+  input,textarea,select{ font-family:inherit; font-size:14px; }
+  :focus-visible{ outline:2px solid var(--pine-500); outline-offset:2px; }
+  a{ color:inherit; }
+  h1,h2,h3,p{ margin:0; }
+
+  .app{ height:100vh; display:flex; flex-direction:column; overflow:hidden; }
+
+  /* ===== Shared top bar ===== */
+  .topbar{ height:56px; flex-shrink:0; border-bottom:1px solid var(--line); background:var(--panel);
+    display:flex; align-items:center; justify-content:space-between; padding:0 20px; gap:16px; position:relative; }
+  .topbar::before{ content:""; position:absolute; top:0; left:0; right:0; height:3px;
+    background:linear-gradient(90deg, var(--rose-500) 0 16%, var(--amber-500) 16% 34%, var(--pine-500) 34% 54%, var(--purple-500) 54% 74%, var(--pink-500) 74% 100%); }
+  .crumbs{ font-size:13px; color:var(--faint); display:flex; align-items:center; gap:8px; min-width:0; }
+  .crumbs a{ display:flex; align-items:center; gap:5px; text-decoration:none; color:var(--muted); }
+  .crumbs a:hover{ color:var(--pine-600); }
+  .crumbs a svg{ width:14px; height:14px; }
+  .crumbs .current{ color:var(--ink); font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .topbar-center{ display:flex; align-items:center; gap:14px; min-width:0; flex:1; }
+  .topbar-title-input{ font-family:var(--font-display); font-weight:600; font-size:16px; border:none; background:transparent; color:var(--ink);
+    padding:4px 6px; border-radius:5px; min-width:0; max-width:320px; }
+  .status-badge{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.02em; flex-shrink:0; }
+  .status-draft{ background:var(--line); color:var(--muted); }
+  .status-published{ background:var(--pine-50); color:var(--pine-700); }
+  .tabs{ display:flex; gap:2px; background:var(--paper); border:1px solid var(--line); border-radius:7px; padding:2px; flex-shrink:0; }
+  .tab-btn{ padding:6px 14px; border-radius:5px; border:none; background:none; font-size:13px; color:var(--muted); font-weight:500; }
+  .tab-btn.active{ background:var(--panel); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.06); }
+  .topbar-actions{ display:flex; gap:8px; flex-shrink:0; }
+
+  .btn{ display:inline-flex; align-items:center; gap:6px; padding:7px 13px; border-radius:7px; border:1px solid var(--line);
+    background:var(--panel); color:var(--muted); font-size:13px; transition:border-color .15s, color .15s, background-color .15s, transform .15s, box-shadow .15s; white-space:nowrap; }
+  .btn:hover{ border-color:var(--faint); color:var(--ink); transform:translateY(-1px); box-shadow:0 3px 10px rgba(43,33,22,.08); }
+  .btn:active{ transform:translateY(0); box-shadow:none; }
+  .btn-primary{ background:var(--pine-500); border-color:var(--pine-500); color:#fff; font-weight:600; }
+  .btn-primary:hover{ background:var(--pine-600); border-color:var(--pine-600); color:#fff; box-shadow:0 4px 14px rgba(43,33,22,.28); }
+  .btn-dark{ background:var(--pine-700); border-color:var(--pine-700); color:#fff; font-weight:600; }
+  .btn-dark:hover{ background:var(--pine-600); border-color:var(--pine-600); box-shadow:0 4px 14px rgba(43,33,22,.28); }
+  .btn-block{ width:100%; justify-content:center; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn-lg{ padding:10px 18px; font-size:14px; border-radius:8px; }
+  .btn-danger-text{ color:var(--rose-500); }
+  .icon-only-btn{ padding:7px; }
+  .icon-only-btn svg{ width:16px; height:16px; display:block; }
+
+  /* ===== Dashboard ===== */
+  .dash{ flex:1; overflow-y:auto; }
+  .dash-inner{ max-width:1040px; margin:0 auto; padding:40px 32px 64px; }
+  .dash-head{ display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:28px; gap:16px; }
+  .dash-title{ font-family:var(--font-display); font-weight:700; font-size:32px; letter-spacing:.01em; color:var(--ink); }
+  .dash-sub{ font-size:14px; color:var(--muted); margin-top:6px; }
+  .study-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:16px; }
+  .study-card{ background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; display:flex; flex-direction:column;
+    gap:10px; cursor:pointer; transition:border-color .15s, box-shadow .2s, transform .2s; position:relative; box-shadow:0 1px 2px rgba(43,33,22,.04); }
+  .study-card:hover{ border-color:var(--pine-300); box-shadow:0 10px 24px rgba(43,33,22,.1); transform:translateY(-3px); }
+  .study-card-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:8px; }
+  .study-card-title{ font-size:15px; font-weight:600; color:var(--ink); line-height:1.35; }
+  .study-card-desc{ font-size:13px; color:var(--muted); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .study-card-meta{ display:flex; align-items:center; gap:10px; font-size:12px; color:var(--faint); margin-top:auto; padding-top:8px; border-top:1px solid var(--line); }
+  .study-card-menu{ position:relative; flex-shrink:0; }
+  .kebab-btn{ padding:5px; border-radius:5px; background:none; border:none; color:var(--faint); display:flex; }
+  .kebab-btn:hover{ background:var(--paper); color:var(--ink); }
+  .kebab-btn svg{ width:16px; height:16px; }
+  .menu-pop{ position:absolute; top:calc(100% + 4px); right:0; background:var(--panel); border:1px solid var(--line); border-radius:8px;
+    box-shadow:0 8px 24px rgba(43,33,22,.16); min-width:170px; z-index:30; padding:5px; animation:popIn .14s ease-out; }
+  .menu-item{ display:flex; align-items:center; gap:9px; width:100%; padding:8px 10px; border-radius:5px; background:none; border:none;
+    font-size:13px; color:var(--ink); text-align:left; }
+  .menu-item:hover{ background:var(--paper); }
+  .menu-item svg{ width:14px; height:14px; color:var(--faint); flex-shrink:0; }
+  .menu-item.danger{ color:var(--rose-500); }
+  .menu-item.danger svg{ color:var(--rose-500); }
+  .new-study-card{ border:1.5px dashed var(--line); border-radius:10px; padding:18px; display:flex; flex-direction:column; align-items:center;
+    justify-content:center; gap:8px; min-height:132px; background:none; color:var(--muted); transition:border-color .15s, background-color .15s, color .15s; }
+  .new-study-card:hover{ border-color:var(--pine-500); color:var(--pine-600); background:var(--pine-50); }
+  .new-study-card svg{ width:22px; height:22px; }
+  .dash-empty{ text-align:center; padding:44px 20px 12px; color:var(--faint); font-size:13px; }
+  .dash-empty svg{ width:56px; height:56px; margin:0 auto 14px; display:block; }
+
+  /* ===== Builder layout ===== */
+  .main{ flex:1; display:flex; min-height:0; }
+  .sidebar-left{ width:264px; flex-shrink:0; border-right:1px solid var(--line); background:var(--panel);
+    display:flex; flex-direction:column; overflow:hidden; }
+  .canvas{ flex:1; min-width:0; overflow-y:auto; }
+  .sidebar-right{ width:300px; flex-shrink:0; border-left:1px solid var(--line); background:var(--panel); overflow-y:auto; }
+
+  .add-actions{ padding:16px; border-bottom:1px solid var(--line); display:flex; flex-direction:column; gap:8px; }
+  .add-actions-label{ font-size:12px; font-weight:500; color:var(--faint); margin-bottom:2px; }
+  .add-btn{ position:relative; }
+  .add-btn-main{ width:100%; display:flex; align-items:center; gap:9px; padding:10px 12px; border-radius:8px; border:1.5px solid var(--pine-500);
+    background:var(--pine-50); color:var(--pine-700); font-size:13px; font-weight:600; transition:background-color .15s, transform .15s; }
+  .add-btn-main:hover{ background:var(--pine-100); transform:translateY(-1px); }
+  .add-btn-main.alt{ border-color:var(--amber-500); background:var(--amber-100); color:var(--amber-600); }
+  .add-btn-main.alt:hover{ background:#F5DFA8; }
+  .add-btn-main svg{ width:16px; height:16px; flex-shrink:0; }
+  .add-btn-main .grow{ flex:1; text-align:left; }
+  .add-menu{ position:absolute; top:calc(100% + 6px); left:0; right:0; background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; box-shadow:0 10px 28px rgba(0,0,0,.14); z-index:30; padding:6px; }
+  .add-menu-item{ display:flex; align-items:flex-start; gap:10px; width:100%; padding:8px 9px; border-radius:6px; background:none; border:none; text-align:left; }
+  .add-menu-item:hover{ background:var(--paper); }
+  .add-menu-icon{ width:26px; height:26px; border-radius:6px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+  .add-menu-icon svg{ width:13px; height:13px; }
+  .add-menu-title{ font-size:13px; font-weight:500; color:var(--ink); }
+  .add-menu-desc{ font-size:11.5px; color:var(--faint); line-height:1.35; margin-top:1px; }
+
+  .lib-scroll{ flex:1; overflow-y:auto; padding:14px 16px; }
+  .lib-group-label{ font-size:12px; font-weight:500; color:var(--faint); margin-bottom:6px; }
+  .lib-item{ width:100%; display:flex; align-items:center; gap:10px; padding:8px; border-radius:6px; background:none; border:1px solid transparent;
+    text-align:left; transition:background-color .15s; margin-bottom:2px; }
+  .lib-item:hover{ background:var(--paper); }
+  .lib-icon{ width:26px; height:26px; border-radius:6px; display:flex; align-items:center;
+    justify-content:center; flex-shrink:0; }
+  .lib-icon svg{ width:13px; height:13px; }
+  .lib-title{ font-size:13px; color:var(--ink); }
+  .lib-footer{ padding:12px 16px; border-top:1px solid var(--line); font-size:11px; color:var(--faint); line-height:1.5; }
+
+  /* Group tint modifiers — a subtle way-finding accent per block category, used as
+     accents on icon chips only (not fills), so the canvas stays calm overall. */
+  .icon-tint-task{ background:var(--pine-50); color:var(--pine-600); }
+  .icon-tint-question{ background:var(--amber-100); color:var(--amber-600); }
+  .icon-tint-structure{ background:var(--purple-50); color:var(--purple-500); }
+
+  .canvas-inner{ max-width:720px; margin:0 auto; padding:32px; }
+  .study-title{ font-family:var(--font-display); font-weight:600; font-size:26px; width:100%; background:transparent; border:none; padding:2px 4px;
+    margin-left:-4px; margin-bottom:6px; color:var(--ink); border-radius:4px; }
+  .study-desc{ width:100%; background:transparent; border:none; resize:none; font-size:14px; color:var(--muted); padding:2px 4px;
+    margin-left:-4px; margin-bottom:22px; border-radius:4px; font-family:inherit; }
+  .flow{ display:flex; flex-direction:column; gap:10px; }
+
+  .block-card{ background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:14px 16px; cursor:pointer;
+    transition:border-color .15s, box-shadow .2s, transform .15s; }
+  .block-card:hover{ border-color:var(--faint); transform:translateY(-1px); box-shadow:0 6px 16px rgba(43,33,22,.07); }
+  .block-card.selected{ border-color:var(--pine-500); box-shadow:0 0 0 1px var(--pine-500); }
+  .block-card.drag-over{ box-shadow:inset 0 2px 0 0 var(--pine-500); }
+  .block-row{ display:flex; align-items:center; gap:12px; }
+  .grip{ color:var(--faint); flex-shrink:0; cursor:grab; display:flex; }
+  .grip svg{ width:16px; height:16px; }
+  .num-badge{ width:24px; height:24px; border-radius:999px; background:var(--paper); border:1px solid var(--line); font-size:11px;
+    font-weight:500; color:var(--muted); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .block-icon{ width:32px; height:32px; border-radius:7px; display:flex; align-items:center;
+    justify-content:center; flex-shrink:0; }
+  .block-icon svg{ width:16px; height:16px; }
+  .block-meta{ min-width:0; flex:1; }
+  .block-title{ font-size:14px; font-weight:500; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .block-summary{ font-size:13px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; display:flex; align-items:center; gap:5px; }
+  .block-summary svg{ width:13px; height:13px; flex-shrink:0; }
+  .block-actions{ display:flex; align-items:center; gap:1px; flex-shrink:0; opacity:0; transition:opacity .15s; }
+  .block-card:hover .block-actions{ opacity:1; }
+  .icon-btn{ padding:6px; border-radius:5px; background:none; border:none; color:var(--faint); display:flex; }
+  .icon-btn svg{ width:14px; height:14px; }
+  .icon-btn:hover{ background:var(--paper); color:var(--ink); }
+  .icon-btn.danger:hover{ background:var(--rose-100); color:var(--rose-500); }
+  .icon-btn:disabled{ opacity:.3; cursor:not-allowed; }
+  .icon-btn:disabled:hover{ background:none; color:var(--faint); }
+
+  .empty-flow{ border:1.5px dashed var(--line); border-radius:10px; padding:44px 20px; text-align:center; font-size:13px; color:var(--faint); }
+  .empty-flow svg{ width:48px; height:48px; margin:0 auto 12px; display:block; }
+
+  /* ===== Right panel ===== */
+  .panel-header{ display:flex; align-items:center; gap:10px; padding:18px 20px 15px; border-bottom:1px solid var(--line); }
+  .panel-header-text{ min-width:0; }
+  .panel-header-title{ font-size:14px; font-weight:500; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .panel-header-sub{ font-size:12px; color:var(--faint); }
+  .panel-body{ padding:18px 20px; }
+  .overview-card{ border:1px solid var(--line); border-radius:8px; padding:15px; margin-bottom:16px; }
+  .overview-row{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:7px; }
+  .overview-row:last-child{ margin-bottom:0; }
+  .overview-row .k{ color:var(--muted); }
+  .overview-row .v{ color:var(--ink); font-weight:500; }
+  .hint-text{ font-size:13px; color:var(--muted); line-height:1.55; }
+
+  /* Theme colour picker — an "art app" style H/S/L mixer for the study's accent colour */
+  .theme-picker{ border:1px solid var(--line); border-radius:8px; padding:15px; margin-bottom:16px; }
+  .theme-picker-label{ font-size:13px; font-weight:500; color:var(--ink); margin-bottom:10px; display:flex; align-items:center; gap:6px; }
+  .theme-picker-label svg{ width:14px; height:14px; color:var(--faint); }
+  .theme-row{ display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  .theme-swatch{ width:34px; height:34px; border-radius:8px; border:1px solid var(--line); flex-shrink:0; box-shadow:inset 0 0 0 2px var(--panel); }
+  .theme-hex{ flex:1; font-family:'Public Sans', monospace; text-transform:uppercase; letter-spacing:.02em; }
+  .theme-slider-group{ margin-bottom:10px; }
+  .theme-slider-group:last-of-type{ margin-bottom:12px; }
+  .theme-slider-label{ display:flex; justify-content:space-between; font-size:11.5px; color:var(--faint); margin-bottom:4px; }
+  .theme-slider{ -webkit-appearance:none; appearance:none; width:100%; height:14px; border-radius:999px; outline:none; border:1px solid rgba(0,0,0,.08); cursor:pointer; }
+  .theme-slider::-webkit-slider-thumb{ -webkit-appearance:none; width:18px; height:18px; border-radius:999px; background:#fff;
+    border:2px solid var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.3); cursor:grab; margin-top:-2px; }
+  .theme-slider::-moz-range-thumb{ width:18px; height:18px; border-radius:999px; background:#fff; border:2px solid var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.3); cursor:grab; }
+  .theme-slider::-moz-range-track{ height:14px; border-radius:999px; }
+  .theme-presets{ display:flex; gap:7px; flex-wrap:wrap; }
+  .theme-preset-swatch{ width:22px; height:22px; border-radius:999px; border:1px solid rgba(0,0,0,.12); padding:0; transition:transform .12s; }
+  .theme-preset-swatch:hover{ transform:scale(1.15); }
+  .theme-reset-link{ font-size:12px; color:var(--muted); background:none; border:none; padding:0 0 0 4px; text-decoration:underline; align-self:center; }
+  .theme-reset-link:hover{ color:var(--ink); }
+
+  .field{ margin-bottom:16px; }
+  .field-label{ font-size:13px; font-weight:500; color:var(--ink); margin-bottom:6px; }
+  .field-hint{ font-size:12px; color:var(--faint); margin-top:6px; line-height:1.4; }
+  .input, .textarea, .select{ width:100%; padding:8px 11px; font-size:14px; background:var(--paper); border:1px solid var(--line);
+    border-radius:6px; color:var(--ink); }
+  .textarea{ resize:none; font-family:inherit; }
+  .input::placeholder, .textarea::placeholder{ color:var(--faint); }
+  .row-2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .seg{ display:flex; gap:8px; }
+  .seg-btn{ flex:1; padding:9px 10px; border-radius:6px; border:1px solid var(--line); background:var(--panel); font-size:13px;
+    color:var(--muted); text-transform:capitalize; display:inline-flex; align-items:center; justify-content:center; gap:6px; }
+  .seg-btn svg{ width:14px; height:14px; flex-shrink:0; }
+  .seg-btn.active{ border-color:var(--pine-500); background:var(--pine-50); color:var(--pine-700); font-weight:500; }
+  .toggle-row{ display:flex; align-items:center; gap:10px; background:none; border:none; padding:0; }
+  .toggle-track{ width:36px; height:20px; border-radius:999px; background:var(--line); position:relative; transition:background-color .15s; flex-shrink:0; }
+  .toggle-track.on{ background:var(--pine-500); }
+  .toggle-thumb{ position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:999px; background:#fff; transition:transform .15s; }
+  .toggle-track.on .toggle-thumb{ transform:translateX(16px); }
+  .toggle-label{ font-size:13px; color:var(--ink); }
+  .note-box{ font-size:13px; color:var(--muted); background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:11px 13px; line-height:1.55; }
+  .demo-field{ border:1px solid var(--line); border-radius:6px; padding:12px; margin-bottom:10px; }
+  .demo-field-top{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+  .demo-type-row{ display:flex; gap:6px; margin-bottom:8px; }
+  .demo-type-btn{ padding:5px 10px; border-radius:5px; border:1px solid var(--line); background:var(--panel); font-size:12px; color:var(--muted); text-transform:capitalize; }
+  .demo-type-btn.active{ border-color:var(--pine-500); background:var(--pine-50); color:var(--pine-700); }
+  .add-field-btn{ width:100%; display:flex; align-items:center; justify-content:center; gap:6px; padding:9px; border-radius:6px;
+    border:1px dashed var(--line); background:none; font-size:13px; color:var(--muted); }
+  .add-field-btn:hover{ border-color:var(--faint); color:var(--ink); }
+  .add-field-btn svg{ width:14px; height:14px; }
+
+  /* ===== Preview / take overlay ===== */
+  .preview-overlay{ position:fixed; inset:0; background:var(--paper); z-index:40; display:flex; flex-direction:column; }
+  .preview-progress{ height:3px; background:var(--line); flex-shrink:0; }
+  .preview-progress-bar{ height:100%; background:var(--pine-500); transition:width .2s; }
+  .preview-topbar{ display:flex; align-items:center; justify-content:space-between; padding:12px 24px; border-bottom:1px solid var(--line); flex-shrink:0; }
+  .preview-step-label{ font-size:12px; color:var(--faint); }
+  .exit-btn{ display:flex; align-items:center; gap:6px; background:none; border:none; font-size:13px; color:var(--muted); }
+  .exit-btn:hover{ color:var(--ink); }
+  .exit-btn svg{ width:14px; height:14px; }
+  .preview-body{ flex:1; overflow-y:auto; padding:56px 24px; }
+  .run-wrap{ max-width:480px; margin:0 auto; }
+  .run-wrap.center{ text-align:center; }
+  .run-eyebrow{ font-size:12px; font-weight:600; color:var(--pine-600); margin-bottom:8px; text-transform:uppercase; letter-spacing:.04em; }
+  .run-headline{ font-family:var(--font-display); font-weight:600; font-size:24px; line-height:1.35; color:var(--ink); margin:0 0 16px; }
+  .run-headline.lg{ font-size:28px; }
+  .run-body-text{ font-size:15px; color:var(--muted); line-height:1.6; margin:0 0 24px; }
+  .consent-box{ display:flex; align-items:flex-start; gap:10px; text-align:left; background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; padding:14px; margin-bottom:22px; cursor:pointer; }
+  .consent-box input{ margin-top:3px; }
+  .consent-box span{ font-size:13px; color:var(--ink); line-height:1.55; }
+  .scale-row{ display:flex; gap:6px; margin-bottom:8px; }
+  .scale-btn{ flex:1; aspect-ratio:1; border-radius:8px; border:1px solid var(--line); background:var(--panel); font-size:14px; font-weight:500; color:var(--ink); transition:transform .12s, border-color .12s, background-color .12s; }
+  .scale-btn:hover{ border-color:var(--pine-300); transform:translateY(-1px); }
+  .scale-btn.selected{ border-color:var(--pine-500); background:var(--pine-500); color:#fff; }
+  .scale-labels{ display:flex; justify-content:space-between; font-size:12px; color:var(--faint); margin-bottom:24px; }
+
+  /* A/B Comparison block */
+  .ab-columns{ display:flex; gap:14px; margin-top:6px; }
+  .ab-panel{ flex:1; min-width:0; border:1px solid var(--line); border-radius:9px; padding:14px; background:var(--panel); text-align:center; }
+  .ab-panel-head{ display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:12px; }
+  .ab-panel-dot{ width:20px; height:20px; border-radius:999px; font-size:11px; font-weight:700; color:#fff; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .ab-panel-dot-a{ background:var(--pine-500); }
+  .ab-panel-dot-b{ background:var(--purple-500); }
+  .ab-panel-label{ font-size:13px; font-weight:500; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ab-choice-row{ display:flex; gap:8px; margin-top:2px; }
+  .ab-choice-btn{ flex:1; padding:12px 10px; border-radius:8px; border:1.5px solid var(--line); background:var(--panel); font-size:13px; font-weight:500; color:var(--ink); transition:border-color .12s, background-color .12s, transform .12s; }
+  .ab-choice-btn:hover{ border-color:var(--pine-300); transform:translateY(-1px); }
+  .ab-choice-btn.selected{ border-color:var(--pine-500); background:var(--pine-50); color:var(--pine-700); }
+  @media (max-width: 560px){ .ab-columns{ flex-direction:column; } }
+  .sus-item{ border-bottom:1px solid var(--line); padding-bottom:20px; margin-bottom:20px; }
+  .sus-item:last-child{ border-bottom:none; margin-bottom:0; padding-bottom:0; }
+  .sus-stmt{ font-size:14px; color:var(--ink); margin:0 0 12px; }
+  .sus-scale{ display:flex; gap:6px; }
+  .sus-btn{ flex:1; padding:8px 0; border-radius:7px; border:1px solid var(--line); background:var(--panel); font-size:13px; font-weight:500; color:var(--ink); transition:transform .12s, border-color .12s, background-color .12s; }
+  .sus-btn:hover{ border-color:var(--pine-300); transform:translateY(-1px); }
+  .sus-btn.selected{ border-color:var(--pine-500); background:var(--pine-500); color:#fff; }
+  .sus-scale-labels{ display:flex; justify-content:space-between; font-size:11px; color:var(--faint); margin-top:4px; }
+  .thankyou-icon{ width:52px; height:52px; border-radius:999px; background:var(--emerald-50); display:flex; align-items:center; justify-content:center; margin:0 auto 18px; }
+  .thankyou-icon svg{ width:26px; height:26px; color:var(--emerald-500); }
+  .demo-field-preview{ margin-bottom:16px; }
+  .closed-notice{ max-width:420px; margin:80px auto; text-align:center; }
+  .closed-notice svg{ width:40px; height:40px; margin-bottom:14px; color:var(--faint); }
+  .closed-notice h2{ font-family:var(--font-display); font-weight:600; font-size:22px; margin-bottom:8px; }
+  .closed-notice p{ font-size:14px; color:var(--muted); }
+
+  /* Modal (prototype + publish) */
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes popIn{ from{ opacity:0; transform:translateY(-4px) scale(.98); } to{ opacity:1; transform:none; } }
+  @keyframes modalIn{ from{ opacity:0; transform:translateY(10px) scale(.97); } to{ opacity:1; transform:none; } }
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(43,33,22,.5); display:flex; align-items:center; justify-content:center;
+    padding:24px; z-index:50; animation:fadeIn .15s ease-out; }
+  .modal-box{ background:var(--panel); overflow:hidden; display:flex; flex-direction:column; box-shadow:0 24px 60px rgba(43,33,22,.32); max-height:92vh; border-radius:10px;
+    animation:modalIn .2s cubic-bezier(.2,.8,.3,1); }
+  .modal-box.device-web{ width:100%; max-width:920px; height:620px; border-radius:12px; }
+  .modal-box.device-mobile{ width:360px; height:min(740px, 88vh); border-radius:36px;
+    border:8px solid var(--ink); box-shadow:0 24px 60px rgba(43,33,22,.45); flex-shrink:0; }
+  .modal-head{ display:flex; align-items:center; gap:10px; padding:10px 14px; border-bottom:1px solid var(--line); flex-shrink:0; }
+  .modal-head .modal-title{ font-size:13px; font-weight:500; color:var(--muted); white-space:nowrap; }
+  .modal-head button{ background:none; border:none; color:var(--faint); display:flex; flex-shrink:0; }
+  .modal-head button:hover{ color:var(--ink); }
+  .modal-head svg{ width:16px; height:16px; }
+  .chrome-dots{ display:flex; gap:6px; flex-shrink:0; }
+  .chrome-dot{ width:9px; height:9px; border-radius:999px; background:var(--line); }
+  .chrome-dot.red{ background:var(--rose-500); } .chrome-dot.yellow{ background:var(--amber-500); } .chrome-dot.green{ background:var(--emerald-500); }
+  .chrome-url{ flex:1; min-width:0; background:var(--paper); border:1px solid var(--line); border-radius:999px; padding:5px 14px;
+    font-size:11.5px; color:var(--muted); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .modal-head.chrome-mobile{ justify-content:center; position:relative; padding:9px 16px 7px; }
+  .mobile-notch{ width:64px; height:5px; border-radius:999px; background:var(--line); }
+  .modal-head.chrome-mobile button{ position:absolute; right:14px; top:50%; transform:translateY(-50%); }
+  .modal-body{ flex:1; display:flex; min-height:0; }
+  .modal-body iframe{ flex:1; width:100% !important; height:100% !important; max-width:none !important; max-height:none !important; border:none; display:block; }
+  .modal-empty{ flex:1; display:flex; align-items:center; justify-content:center; font-size:13px; color:var(--faint); text-align:center; padding:0 24px; }
+  .modal-fallback{ flex-shrink:0; text-align:center; font-size:11.5px; color:var(--faint); padding:7px 10px; border-top:1px solid var(--line); background:var(--paper); }
+  .modal-fallback a{ color:var(--pine-600); font-weight:500; text-decoration:none; display:inline-flex; align-items:center; gap:3px; }
+  .modal-fallback a:hover{ text-decoration:underline; }
+  .modal-fallback a svg{ width:11px; height:11px; }
+
+  .publish-modal{ max-width:460px; height:auto; max-height:none; }
+  .publish-body{ padding:22px 24px; overflow-y:auto; }
+  .publish-icon-row{ display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+  .publish-icon{ width:38px; height:38px; border-radius:10px; background:var(--pine-50); color:var(--pine-500); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .publish-icon svg{ width:19px; height:19px; }
+  .publish-heading{ font-family:var(--font-display); font-weight:600; font-size:19px; }
+  .publish-sub{ font-size:13px; color:var(--muted); margin-top:2px; }
+  .link-row{ display:flex; gap:8px; margin:18px 0; }
+  .link-input{ flex:1; padding:9px 11px; font-size:13px; border:1px solid var(--line); border-radius:6px; background:var(--paper); color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .accepting-row{ display:flex; align-items:center; justify-content:space-between; padding:12px 14px; border:1px solid var(--line); border-radius:8px; margin-bottom:6px; }
+  .accepting-row .t{ font-size:13px; font-weight:500; color:var(--ink); }
+  .accepting-row .d{ font-size:12px; color:var(--faint); margin-top:1px; }
+  .publish-foot{ display:flex; justify-content:flex-end; gap:8px; padding:14px 24px; border-top:1px solid var(--line); }
+  .copied-tag{ font-size:12px; color:var(--pine-600); font-weight:500; }
+
+  .template-modal{ max-width:480px; height:auto; max-height:none; }
+  .sync-modal{ max-width:620px; width:100%; height:auto; max-height:92vh; }
+  .sync-steps{ margin:14px 0 0 18px; padding:0; font-size:13px; color:var(--muted); line-height:1.6; }
+  .sync-steps li{ margin-bottom:8px; }
+  .sync-steps b{ color:var(--ink); font-weight:600; }
+  .code-box{ background:var(--paper); border:1px solid var(--line); border-radius:6px; padding:10px 12px; font:11.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; color:var(--muted); max-height:150px; overflow:auto; white-space:pre; margin:8px 0; }
+  .sync-input{ width:100%; padding:9px 11px; font-size:13px; border:1px solid var(--line); border-radius:6px; background:var(--panel); color:var(--ink); margin-top:6px; }
+  .sync-msg{ font-size:12.5px; margin-top:8px; line-height:1.5; }
+  .sync-msg.ok{ color:var(--emerald-500); } .sync-msg.err{ color:var(--rose-500); }
+  .sync-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+  .sync-section{ border-top:1px solid var(--line); margin-top:18px; padding-top:16px; }
+  .sync-section h4{ font-size:13px; font-weight:600; color:var(--ink); margin-bottom:4px; }
+  .sync-status{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12px; color:var(--faint); margin-bottom:14px; }
+  .share-row{ display:flex; gap:8px; margin:-6px 0 14px; flex-wrap:wrap; }
+  .warn-box{ font-size:12.5px; line-height:1.55; color:var(--ink); background:var(--amber-50, #fff6e0); border:1px solid var(--amber-500); border-radius:6px; padding:10px 12px; margin-bottom:12px; }
+  .template-options{ display:flex; flex-direction:column; gap:8px; margin-top:16px; }
+  .template-option{ display:flex; align-items:flex-start; gap:12px; padding:13px 14px; border:1px solid var(--line); border-radius:9px;
+    background:var(--panel); text-align:left; transition:border-color .15s, box-shadow .15s, transform .15s; }
+  .template-option:hover{ border-color:var(--pine-300); box-shadow:0 4px 12px rgba(43,33,22,.08); transform:translateY(-1px); }
+  .template-option-icon{ width:34px; height:34px; border-radius:8px; background:var(--pine-50); color:var(--pine-600); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .template-option-icon svg{ width:17px; height:17px; }
+  .template-option-title{ display:block; font-size:14px; font-weight:600; color:var(--ink); }
+  .template-option-desc{ display:block; font-size:12.5px; color:var(--muted); line-height:1.45; margin-top:2px; }
+
+  /* ===== Results page ===== */
+  .results-wrap{ flex:1; overflow-y:auto; }
+  .results-inner{ max-width:820px; margin:0 auto; padding:32px; }
+  .results-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--line); margin-bottom:24px; }
+  .rtab{ padding:10px 4px; margin-right:22px; font-size:13px; font-weight:500; color:var(--faint); background:none; border:none; border-bottom:2px solid transparent; transition:color .15s, border-color .15s; }
+  .rtab.active{ color:var(--ink); border-bottom-color:var(--pine-500); }
+  .stat-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:14px; margin-bottom:28px; }
+  .stat-card{ border:1px solid var(--line); border-radius:10px; padding:16px; background:var(--panel); box-shadow:0 1px 2px rgba(43,33,22,.04); }
+  .stat-card .num{ font-family:var(--font-display); font-weight:700; font-size:30px; color:var(--ink); }
+  .stat-card .num small{ font-size:14px; color:var(--faint); font-family:var(--font-sans); font-weight:400; }
+  .stat-card .lbl{ font-size:12.5px; color:var(--muted); margin-top:3px; }
+  .stat-card .pill{ display:inline-block; margin-top:6px; font-size:11px; padding:2px 8px; border-radius:999px; }
+  .section-title{ font-size:14px; font-weight:600; color:var(--ink); margin-bottom:12px; padding-left:10px; border-left:3px solid var(--amber-500); }
+  .bar-row{ margin-bottom:14px; }
+  .bar-row-top{ display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; }
+  .bar-row-top .q{ color:var(--ink); max-width:80%; }
+  .bar-row-top .v{ color:var(--muted); font-weight:500; flex-shrink:0; }
+  .bar-track{ height:8px; border-radius:999px; background:var(--line); overflow:hidden; }
+  .bar-fill{ height:100%; background:linear-gradient(90deg, var(--pine-500), var(--pine-300)); border-radius:999px; }
+  .option-bar{ display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:12.5px; }
+  .option-bar .lab{ width:110px; flex-shrink:0; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .option-bar .bar-track{ flex:1; }
+  .option-bar .cnt{ width:24px; text-align:right; color:var(--faint); flex-shrink:0; }
+  .ab-split-row{ display:flex; height:14px; border-radius:999px; overflow:hidden; background:var(--line); margin-bottom:10px; }
+  .ab-split-seg{ transition:flex .2s; }
+  .ab-split-legend{ display:flex; flex-wrap:wrap; gap:14px; font-size:12.5px; color:var(--muted); }
+  .ab-legend-dot{ display:inline-block; width:8px; height:8px; border-radius:999px; margin-right:5px; }
+  .feedback-item{ border:1px solid var(--line); border-radius:8px; padding:13px 15px; margin-bottom:8px; font-size:13.5px; color:var(--ink); line-height:1.55; background:var(--panel); }
+  .feedback-meta{ font-size:11.5px; color:var(--faint); margin-top:6px; }
+  .response-card{ border:1px solid var(--line); border-radius:10px; margin-bottom:10px; overflow:hidden; background:var(--panel); }
+  .response-head{ display:flex; align-items:center; justify-content:space-between; padding:13px 16px; cursor:pointer; }
+  .response-head:hover{ background:var(--paper); }
+  .response-head .l{ font-size:13px; color:var(--ink); font-weight:500; }
+  .response-head .r{ display:flex; align-items:center; gap:12px; font-size:12.5px; color:var(--muted); }
+  .response-body{ border-top:1px solid var(--line); padding:14px 16px; display:none; }
+  .response-body.open{ display:block; }
+  .resp-row{ margin-bottom:12px; }
+  .resp-row:last-child{ margin-bottom:0; }
+  .resp-q{ font-size:12.5px; color:var(--faint); margin-bottom:3px; }
+  .resp-a{ font-size:13.5px; color:var(--ink); line-height:1.5; }
+  .results-empty{ text-align:center; padding:44px 20px 12px; color:var(--faint); font-size:13px; }
+  .results-empty svg{ width:56px; height:56px; margin:0 auto 14px; display:block; }
+
+  /* Grade / status tone chips share one palette across the app */
+  .grade-pill{ font-size:11px; font-weight:600; padding:2px 9px; border-radius:999px; }
+  .grade-pine{ background:var(--emerald-50); color:var(--emerald-700); }
+  .grade-amber{ background:var(--amber-100); color:var(--amber-600); }
+  .grade-rose{ background:var(--rose-100); color:var(--rose-500); }
+
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+"use strict";
+
+/* =========================================================================
+   ICONS
+   ========================================================================= */
+const ICONS = {
+  flag: '<path d="M5 3v18"/><path d="M5 4h11l-2.5 4L16 12H5"/>',
+  cursor: '<path d="M6 3l6 15 2.5-6.5L21 9z"/>',
+  gauge: '<circle cx="12" cy="13" r="8"/><path d="M12 13l3.5-4"/><path d="M9 5.5V3M15 5.5V3"/>',
+  clipboard: '<rect x="6" y="4" width="12" height="17" rx="1.5"/><path d="M9 4V3a1 1 0 011-1h4a1 1 0 011 1v1"/><path d="M9 10h6M9 13.5h6M9 17h4"/>',
+  users: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14c2.5.4 4.5 2.5 4.5 5"/>',
+  message: '<path d="M4 5h16v11H9l-5 4V5z"/><path d="M8 9h8M8 12h5"/>',
+  checkCircle: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.3l2.4 2.4L15.5 9.5"/>',
+  plus: '<path d="M12 5v14M5 12h14"/>',
+  trash: '<path d="M5 7h14"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2"/><path d="M7 7l1 13h8l1-13"/>',
+  copy: '<rect x="8" y="8" width="12" height="12" rx="1.5"/><path d="M16 8V5.5A1.5 1.5 0 0014.5 4H5.5A1.5 1.5 0 004 5.5v9A1.5 1.5 0 005.5 16H8"/>',
+  chevronUp: '<path d="M6 14l6-6 6 6"/>',
+  chevronDown: '<path d="M6 10l6 6 6-6"/>',
+  grip: '<circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>',
+  eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="2.75"/>',
+  download: '<path d="M12 4v11"/><path d="M7.5 11L12 15.5 16.5 11"/><path d="M5 19h14"/>',
+  x: '<path d="M6 6l12 12M18 6L6 18"/>',
+  arrowLeft: '<path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/>',
+  link: '<path d="M9.5 14.5l5-5"/><path d="M8 16.5a3.5 3.5 0 010-5l2-2a3.5 3.5 0 015 5l-.7.7"/><path d="M16 7.5a3.5 3.5 0 010 5l-2 2a3.5 3.5 0 01-5-5l.7-.7"/>',
+  layers: '<path d="M12 3l8 4.5-8 4.5-8-4.5L12 3z"/><path d="M4 12l8 4.5 8-4.5"/><path d="M4 16.5L12 21l8-4.5"/>',
+  external: '<path d="M9 5H5a1 1 0 00-1 1v13a1 1 0 001 1h13a1 1 0 001-1v-4"/><path d="M14 4h6v6"/><path d="M20 4l-9 9"/>',
+  send: '<path d="M4 12l16-7-6.5 16-2.5-7-7-2z"/><path d="M13.5 13.5L20 5"/>',
+  kebab: '<circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>',
+  bar: '<path d="M5 19V10M12 19V5M19 19v-7"/>',
+  inbox: '<path d="M4 12h4l2 3h4l2-3h4"/><path d="M4 12l1.5-6.5A1 1 0 016.47 4h11.06a1 1 0 01.97 1.5L20 12"/><path d="M4 12v6a1 1 0 001 1h14a1 1 0 001-1v-6"/>',
+  monitor: '<rect x="3" y="4" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16v4"/>',
+  smartphone: '<rect x="7" y="2" width="10" height="20" rx="2.2"/><path d="M11 18.3h2"/>',
+  sun: '<circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8L6 18M18 6l1.8-1.8"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/>',
+  palette: '<circle cx="12" cy="12" r="9"/><circle cx="8.2" cy="10" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="7.8" r="1.3" fill="currentColor" stroke="none"/><circle cx="15.8" cy="10" r="1.3" fill="currentColor" stroke="none"/><path d="M12 21a9 9 0 0 1 0-18 4 4 0 0 1 0 8h-1a2 2 0 0 0 0 4h1a4 4 0 0 1 0 6z" fill="none"/>',
+  columns: '<rect x="3.5" y="4" width="7.5" height="16" rx="1.5"/><rect x="13" y="4" width="7.5" height="16" rx="1.5"/><path d="M7.25 8.5v0M16.75 8.5v0"/>',
+  wand: '<path d="M4 20l9-9"/><path d="M15 5l1.5 1.5M19 9l1.5 1.5M12 3.5V5M20.5 12H19M7 4l.9.9M4 11.5l.9.9"/>'
+};
+function icon(name, cls) {
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="' + (cls||'') + '">' + (ICONS[name]||'') + '</svg>';
+}
+/* A small hand-crafted "bloom" motif (bold outline, flat colour, simple shapes) used
+   in place of generic empty-state art — folk-illustration flavour, not a mandala. */
+function decorativeBloom(cls) {
+  const petals = [0,45,90,135,180,225,270,315].map((deg, i) => {
+    const fill = i % 2 === 0 ? "var(--rose-500)" : "var(--amber-500)";
+    return `<ellipse cx="60" cy="30" rx="13" ry="21" fill="${fill}" stroke="var(--ink)" stroke-width="2.5" transform="rotate(${deg} 60 60)"/>`;
+  }).join("");
+  return `<svg viewBox="0 0 120 120" class="${cls||''}" fill="none">
+    ${petals}
+    <circle cx="60" cy="60" r="15" fill="var(--pine-500)" stroke="var(--ink)" stroke-width="2.5"/>
+    <circle cx="60" cy="60" r="4" fill="var(--panel)"/>
+  </svg>`;
+}
+
+/* =========================================================================
+   HELPERS
+   ========================================================================= */
+function uid() { return Math.random().toString(36).slice(2, 10); }
+function esc(str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+function setPath(obj, path, val) {
+  const keys = path.split(".");
+  let o = obj;
+  for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]];
+  o[keys[keys.length - 1]] = val;
+}
+function fmtDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " · " + d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+/* =========================================================================
+   COLOUR THEMING — light/dark mode, and a per-study accent colour that
+   researchers can mix with H/S/L sliders (like an art app's colour picker).
+   ========================================================================= */
+const DEFAULT_THEME_HEX = "#0E7C7B"; // the original peacock teal brand colour
+
+function hexToHSL(hex) {
+  hex = (hex || "").replace("#", "");
+  if (hex.length === 3) hex = hex.split("").map(c => c + c).join("");
+  const r = parseInt(hex.slice(0, 2), 16) / 255;
+  const g = parseInt(hex.slice(2, 4), 16) / 255;
+  const b = parseInt(hex.slice(4, 6), 16) / 255;
+  if ([r, g, b].some(isNaN)) return { h: 178, s: 79, l: 27 }; // fallback ~ default teal
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      default: h = (r - g) / d + 4;
+    }
+    h *= 60;
+  }
+  return { h: Math.round(h), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+function hslToHex(h, s, l) {
+  h = ((h % 360) + 360) % 360; s = Math.max(0, Math.min(100, s)) / 100; l = Math.max(0, Math.min(100, l)) / 100;
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = l - c / 2;
+  let r, g, b;
+  if (h < 60) { r = c; g = x; b = 0; } else if (h < 120) { r = x; g = c; b = 0; }
+  else if (h < 180) { r = 0; g = c; b = x; } else if (h < 240) { r = 0; g = x; b = c; }
+  else if (h < 300) { r = x; g = 0; b = c; } else { r = c; g = 0; b = x; }
+  const rr = Math.max(0, Math.min(255, Math.round((r + m) * 255)));
+  const gg = Math.max(0, Math.min(255, Math.round((g + m) * 255)));
+  const bb = Math.max(0, Math.min(255, Math.round((b + m) * 255)));
+  return "#" + [rr, gg, bb].map(v => v.toString(16).padStart(2, "0")).join("");
+}
+/* Builds the 50/100/300/500/600/700 scale used throughout the UI (buttons,
+   active tabs, focus rings, progress bars, icon chips) from one base colour.
+   Whatever lightness the researcher picks becomes exactly the "500" — the
+   solid button colour — lighter tints and darker shades are derived from it. */
+function generateShadeScale(hex) {
+  const { h, s } = hexToHSL(hex);
+  const baseL = hexToHSL(hex).l;
+  return {
+    50: hslToHex(h, Math.max(s * 0.55, 12), 93),
+    100: hslToHex(h, Math.max(s * 0.65, 18), 85),
+    300: hslToHex(h, s, 60),
+    500: hex,
+    600: hslToHex(h, s, Math.max(baseL - 10, 8)),
+    700: hslToHex(h, s, Math.max(baseL - 20, 5))
+  };
+}
+function applyThemeColor(hex) {
+  const scale = generateShadeScale(hex || DEFAULT_THEME_HEX);
+  const root = document.documentElement.style;
+  root.setProperty("--pine-50", scale[50]);
+  root.setProperty("--pine-100", scale[100]);
+  root.setProperty("--pine-300", scale[300]);
+  root.setProperty("--pine-500", scale[500]);
+  root.setProperty("--pine-600", scale[600]);
+  root.setProperty("--pine-700", scale[700]);
+}
+
+/* Background colour override. Unlike the accent scale (which is harmless to
+   always set, since dark mode never touches --pine-*), the neutral surface
+   tokens here are exactly what dark mode also controls — so we only ever set
+   these inline when a study has an explicit custom background, and remove
+   the inline override entirely otherwise, so the dark/light toggle keeps
+   working normally for every study that hasn't customised its background. */
+const DEFAULT_BG_HEX = "#F7EFDF"; // the original warm-ivory paper colour
+const BG_TOKENS = ["--paper", "--panel", "--line", "--ink", "--muted", "--faint"];
+
+function computeBackgroundTokens(hex) {
+  const { h, s, l } = hexToHSL(hex);
+  const isDark = l < 55;
+  const paper = hex;
+  const panel = hslToHex(h, Math.max(s * 0.45, 4), isDark ? Math.min(l + 7, 92) : Math.min(l + 6, 99));
+  const line = hslToHex(h, Math.max(s * 0.4, 6), isDark ? Math.min(l + 20, 88) : Math.max(l - 20, 6));
+  return {
+    paper, panel, line,
+    ink: isDark ? "#F2E8D6" : "#2B2116",
+    muted: isDark ? "#C6B392" : "#7A6C55",
+    faint: isDark ? "#8C7A5C" : "#A99A7C"
+  };
+}
+function applyBackgroundColor(hex) {
+  const tokens = computeBackgroundTokens(hex);
+  const root = document.documentElement.style;
+  root.setProperty("--paper", tokens.paper);
+  root.setProperty("--panel", tokens.panel);
+  root.setProperty("--line", tokens.line);
+  root.setProperty("--ink", tokens.ink);
+  root.setProperty("--muted", tokens.muted);
+  root.setProperty("--faint", tokens.faint);
+}
+function clearBackgroundOverride() {
+  const root = document.documentElement.style;
+  BG_TOKENS.forEach(t => root.removeProperty(t));
+}
+
+const COLOR_SCHEME_KEY = "researchkit:colorScheme";
+function loadColorScheme() {
+  try { return localStorage.getItem(COLOR_SCHEME_KEY) || "light"; } catch (e) { return "light"; }
+}
+function applyColorScheme(mode) {
+  document.documentElement.setAttribute("data-theme", mode === "dark" ? "dark" : "light");
+  try { localStorage.setItem(COLOR_SCHEME_KEY, mode); } catch (e) {}
+}
+
+function scoreSUS(values) {
+  if (!values || values.some(v => v == null)) return null;
+  let total = 0;
+  values.forEach((v, i) => { total += ((i + 1) % 2 !== 0) ? (v - 1) : (5 - v); });
+  return total * 2.5;
+}
+function susGrade(score) {
+  if (score == null) return { label: "—", tone: "muted" };
+  if (score >= 80.3) return { label: "Excellent", tone: "pine" };
+  if (score >= 68) return { label: "Good", tone: "pine" };
+  if (score >= 51) return { label: "OK", tone: "amber" };
+  return { label: "Poor", tone: "rose" };
+}
+const SUS_ITEMS = [
+  "I think that I would like to use this product frequently.",
+  "I found the product unnecessarily complex.",
+  "I thought the product was easy to use.",
+  "I think that I would need the support of a technical person to be able to use this product.",
+  "I found the various functions in this product were well integrated.",
+  "I thought there was too much inconsistency in this product.",
+  "I would imagine that most people would learn to use this product very quickly.",
+  "I found the product very cumbersome to use.",
+  "I felt very confident using the product.",
+  "I needed to learn a lot of things before I could get going with this product."
+];
+
+/* =========================================================================
+   BLOCK REGISTRY — add a new key here (same shape) to register a new
+   research method or question type; it appears automatically in the
+   add-task / add-question menus, canvas, properties panel and results.
+   ========================================================================= */
+const BLOCK_REGISTRY = {
+  welcome: {
+    label: "Welcome & consent", group: "structure", icon: "flag", singleton: true,
+    description: "Intro screen with an informed-consent gate.",
+    defaultConfig: () => ({
+      headline: "Before we begin",
+      message: "Thanks for helping us improve this product. This session should take about 10 minutes. There are no right or wrong answers — we're testing the design, not you.",
+      consentRequired: true,
+      consentText: "I agree to take part in this study and understand my responses will be used for research purposes."
+    }),
+    summary: c => esc(c.headline),
+    propsHTML: c => `
+      ${fieldText("Headline", "headline", c.headline)}
+      ${fieldTextarea("Message", "message", c.message, 4)}
+      ${fieldToggle("consentRequired", c.consentRequired, "Require consent before continuing", "Consent")}
+      ${c.consentRequired ? fieldTextarea("Consent statement", "consentText", c.consentText, 3) : ""}
+    `,
+    runHTML: (c, value) => `
+      <div class="run-wrap center">
+        <h2 class="run-headline lg">${esc(c.headline)}</h2>
+        <p class="run-body-text">${esc(c.message)}</p>
+        ${c.consentRequired ? `
+        <label class="consent-box">
+          <input type="checkbox" data-action="consent-toggle" ${value && value.agreed ? "checked" : ""}/>
+          <span>${esc(c.consentText)}</span>
+        </label>` : ""}
+        <button class="btn btn-primary" data-action="run-next" ${c.consentRequired && !(value && value.agreed) ? "disabled" : ""}>Continue</button>
+      </div>`,
+    resultsView: null
+  },
+
+  task: {
+    label: "Prototype task", group: "task", icon: "cursor", autoFollowWith: "seq",
+    description: "A task performed in an embedded or linked prototype.",
+    defaultConfig: () => ({
+      title: "Task 1",
+      instructions: "Find and add a wireless keyboard to your cart, then proceed to checkout.",
+      prototypeUrl: "https://www.figma.com/proto/your-file-key/your-prototype",
+      sourceType: "url",
+      embedCode: "",
+      deviceType: "web",
+      openMode: "modal",
+      successCriteria: "Participant reaches the order confirmation screen."
+    }),
+    summary: c => {
+      const deviceIcon = icon(c.deviceType === "mobile" ? "smartphone" : "monitor", "");
+      if (c.sourceType === "embed") return deviceIcon + " " + (c.embedCode ? "Custom embed code" : "No embed code set");
+      return deviceIcon + " " + esc((c.prototypeUrl || "No prototype URL set").replace(/^https?:\/\//, ""));
+    },
+    propsHTML: c => `
+      ${fieldText("Task title", "title", c.title)}
+      ${fieldTextarea("Instructions shown to participant", "instructions", c.instructions, 4)}
+      <div class="field">
+        <div class="field-label">Prototype source</div>
+        <div class="seg">
+          <button type="button" class="seg-btn ${c.sourceType === "url" || !c.sourceType ? "active" : ""}" data-action="set-field" data-field="sourceType" data-value="url">Link / URL</button>
+          <button type="button" class="seg-btn ${c.sourceType === "embed" ? "active" : ""}" data-action="set-field" data-field="sourceType" data-value="embed">Embed code</button>
+        </div>
+      </div>
+      ${c.sourceType === "embed"
+        ? fieldTextarea("Embed code", "embedCode", c.embedCode, 5, "Paste the <iframe> embed snippet from Figma, Maze, InVision, or any other tool that provides one — usually found under Share → Embed. We'll pull the link out of it and size it to fit the frame automatically, so the snippet's own width/height won't cause cropping.")
+        : fieldText("Prototype URL", "prototypeUrl", c.prototypeUrl, "https://…", "Figma, InVision, or any hosted prototype link. Figma links are auto-converted so they can be embedded.")}
+      <div class="field">
+        <div class="field-label">Prototype type</div>
+        <div class="seg">
+          <button type="button" class="seg-btn ${c.deviceType === "web" ? "active" : ""}" data-action="set-field" data-field="deviceType" data-value="web">${icon("monitor","")} Web app</button>
+          <button type="button" class="seg-btn ${c.deviceType === "mobile" ? "active" : ""}" data-action="set-field" data-field="deviceType" data-value="mobile">${icon("smartphone","")} Mobile app</button>
+        </div>
+        <div class="field-hint">Sizes the preview window to match — a wide browser frame for web, a phone frame for mobile.</div>
+      </div>
+      <div class="field">
+        <div class="field-label">Opens in</div>
+        <div class="seg">
+          <button type="button" class="seg-btn ${c.openMode === "modal" ? "active" : ""}" data-action="set-field" data-field="openMode" data-value="modal">In-page modal</button>
+          <button type="button" class="seg-btn ${c.openMode === "popup" ? "active" : ""}" data-action="set-field" data-field="openMode" data-value="popup">New window</button>
+        </div>
+        ${c.sourceType === "embed" ? `<div class="field-hint">With embed code, "New window" opens the link found inside the snippet, if one can be found.</div>` : ""}
+      </div>
+      ${fieldTextarea("Success criteria (internal note)", "successCriteria", c.successCriteria, 2)}
+    `,
+    runHTML: (c, value) => `
+      <div class="run-wrap">
+        <div class="run-eyebrow">${esc(c.title)}</div>
+        <h2 class="run-headline">${esc(c.instructions)}</h2>
+        <button class="btn btn-dark btn-block" style="margin-bottom:10px;" data-action="open-prototype">${icon("external","")} Open prototype</button>
+        <button class="btn btn-block" data-action="run-next" ${value && value.visited ? "" : "disabled"}>I've finished this task</button>
+      </div>`,
+    resultsView: { type: "none" }
+  },
+
+  abtest: {
+    label: "A/B Comparison", group: "task", icon: "columns",
+    description: "Show two interfaces side by side and ask which participants prefer.",
+    defaultConfig: () => ({
+      title: "Which design do you prefer?",
+      instructions: "Take a look at both versions below, then tell us which one you'd choose.",
+      variantA: { label: "Version A", url: "https://www.figma.com/proto/your-file-key/version-a", deviceType: "web" },
+      variantB: { label: "Version B", url: "https://www.figma.com/proto/your-file-key/version-b", deviceType: "web" },
+      askStrength: true,
+      askWhy: true
+    }),
+    summary: c => icon("columns", "") + " " + esc(c.variantA.label) + " vs " + esc(c.variantB.label),
+    propsHTML: c => `
+      ${fieldText("Question title", "title", c.title)}
+      ${fieldTextarea("Instructions shown to participant", "instructions", c.instructions, 3)}
+      <div class="field">
+        <div class="field-label">Version A</div>
+        <input class="input" style="margin-bottom:8px;" data-action="set-nested-field" data-path="variantA.label" data-focus-id="prop-variantA-label" value="${esc(c.variantA.label)}" placeholder="Label shown to participants"/>
+        <input class="input" data-action="set-nested-field" data-path="variantA.url" data-focus-id="prop-variantA-url" value="${esc(c.variantA.url)}" placeholder="https://…"/>
+      </div>
+      <div class="field">
+        <div class="field-label">Version B</div>
+        <input class="input" style="margin-bottom:8px;" data-action="set-nested-field" data-path="variantB.label" data-focus-id="prop-variantB-label" value="${esc(c.variantB.label)}" placeholder="Label shown to participants"/>
+        <input class="input" data-action="set-nested-field" data-path="variantB.url" data-focus-id="prop-variantB-url" value="${esc(c.variantB.url)}" placeholder="https://…"/>
+        <div class="field-hint">Figma links are auto-converted so they can be embedded, same as a Prototype task block.</div>
+      </div>
+      ${fieldToggle("askStrength", c.askStrength, "Ask how strongly they prefer it (5-point scale)", "Follow-up questions")}
+      ${fieldToggle("askWhy", c.askWhy, 'Ask an open-ended "why?" question')}
+      <div class="note-box">Modelled on NN/g's standard preference-testing approach: show the variations, ask which one participants prefer, then ask why — the "why" is what turns a simple vote into something you can act on.</div>
+    `,
+    runHTML: (c, value) => {
+      const v = value || {};
+      const choice = v.choice || null;
+      const strength = v.strength ?? null;
+      const canContinue = !!choice;
+      const frame = (side, variant) => `
+        <div class="ab-panel">
+          <div class="ab-panel-head">
+            <span class="ab-panel-dot ab-panel-dot-${side.toLowerCase()}">${side}</span>
+            <span class="ab-panel-label">${esc(variant.label)}</span>
+          </div>
+          <button class="btn btn-dark btn-block" data-action="abtest-open" data-side="${side}">${icon("external","")} Open ${esc(variant.label)}</button>
+        </div>`;
+      return `
+      <div class="run-wrap" style="max-width:640px;">
+        <h2 class="run-headline">${esc(c.title)}</h2>
+        <p class="run-body-text">${esc(c.instructions)}</p>
+        <div class="ab-columns">
+          ${frame("A", c.variantA)}
+          ${frame("B", c.variantB)}
+        </div>
+        <div class="field-label" style="margin-top:26px;">Which one do you prefer?</div>
+        <div class="ab-choice-row">
+          <button class="ab-choice-btn ${choice==="A"?"selected":""}" data-action="abtest-choose" data-value="A">${esc(c.variantA.label)}</button>
+          <button class="ab-choice-btn ${choice==="neutral"?"selected":""}" data-action="abtest-choose" data-value="neutral">No preference</button>
+          <button class="ab-choice-btn ${choice==="B"?"selected":""}" data-action="abtest-choose" data-value="B">${esc(c.variantB.label)}</button>
+        </div>
+        ${c.askStrength && choice && choice !== "neutral" ? `
+          <div class="field-label" style="margin-top:22px;">How strongly do you prefer it?</div>
+          <div class="scale-row">
+            ${[1,2,3,4,5].map(n => `<button class="scale-btn ${strength===n?"selected":""}" data-action="abtest-strength" data-value="${n}">${n}</button>`).join("")}
+          </div>
+          <div class="scale-labels"><span>Slightly</span><span>Strongly</span></div>
+        ` : ""}
+        ${c.askWhy ? `
+          <div class="field-label" style="margin-top:22px;">Why did you choose that one? <span style="color:var(--faint);font-weight:400;">(optional)</span></div>
+          <textarea class="textarea" rows="4" data-action="abtest-why" data-focus-id="abtest-why" placeholder="What stood out to you…">${esc(v.why || "")}</textarea>
+        ` : ""}
+        <button class="btn btn-primary" style="margin-top:20px;" data-action="run-next" ${canContinue ? "" : "disabled"}>Continue</button>
+      </div>`;
+    },
+    resultsView: { type: "abtest" }
+  },
+
+  seq: {
+    label: "Single Ease Question", group: "question", icon: "gauge",
+    description: "One 7-point ease rating, asked right after a task.",
+    defaultConfig: () => ({ question: "Overall, that task was:", lowLabel: "Very difficult", highLabel: "Very easy" }),
+    summary: () => "7-point ease rating",
+    propsHTML: c => `
+      ${fieldText("Question", "question", c.question)}
+      <div class="row-2">
+        ${fieldText("Low end label", "lowLabel", c.lowLabel)}
+        ${fieldText("High end label", "highLabel", c.highLabel)}
+      </div>
+    `,
+    runHTML: (c, value) => `
+      <div class="run-wrap">
+        <h2 class="run-headline">${esc(c.question)}</h2>
+        <div class="scale-row">
+          ${[1,2,3,4,5,6,7].map(n => `<button class="scale-btn ${value===n?"selected":""}" data-action="seq-rate" data-value="${n}">${n}</button>`).join("")}
+        </div>
+        <div class="scale-labels"><span>${esc(c.lowLabel)}</span><span>${esc(c.highLabel)}</span></div>
+        <button class="btn btn-primary" data-action="run-next" ${value==null?"disabled":""}>Continue</button>
+      </div>`,
+    resultsView: { type: "scale-avg", max: 7 }
+  },
+
+  sus: {
+    label: "System Usability Scale", group: "question", icon: "clipboard", singleton: true,
+    description: "The standard 10-item SUS questionnaire, auto-scored.",
+    defaultConfig: () => ({ intro: "Please respond to the following 10 statements based on your overall experience today." }),
+    summary: () => "10 fixed items · auto-scored 0–100",
+    propsHTML: c => `
+      ${fieldTextarea("Intro text", "intro", c.intro, 3)}
+      <div class="note-box">The 10 SUS statements are standardized and can't be edited, so scores stay comparable across studies. Scoring (odd items ×(x−1), even items ×(5−x), sum ×2.5) runs automatically.</div>
+    `,
+    runHTML: (c, value) => {
+      const vals = value || Array(10).fill(null);
+      const complete = vals.every(v => v != null);
+      return `
+      <div class="run-wrap">
+        <h2 class="run-headline">System Usability Scale</h2>
+        <p class="run-body-text" style="margin-bottom:22px;">${esc(c.intro)}</p>
+        ${SUS_ITEMS.map((item, i) => `
+          <div class="sus-item">
+            <p class="sus-stmt">${i+1}. ${esc(item)}</p>
+            <div class="sus-scale">
+              ${[1,2,3,4,5].map(n => `<button class="sus-btn ${vals[i]===n?"selected":""}" data-action="sus-rate" data-index="${i}" data-value="${n}">${n}</button>`).join("")}
+            </div>
+            <div class="sus-scale-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+          </div>
+        `).join("")}
+        <button class="btn btn-primary" style="margin-top:8px;" data-action="run-next" ${complete?"":"disabled"}>Continue</button>
+      </div>`;
+    },
+    resultsView: { type: "sus" }
+  },
+
+  demographics: {
+    label: "Participant demographics", group: "question", icon: "users",
+    description: "Configurable background questions.",
+    defaultConfig: () => ({
+      fields: [
+        { id: uid(), label: "Age range", type: "select", options: ["Under 18","18–24","25–34","35–44","45–54","55–64","65+"] },
+        { id: uid(), label: "Tech proficiency", type: "select", options: ["Beginner","Intermediate","Advanced","Expert"] },
+        { id: uid(), label: "Occupation", type: "text", options: [] }
+      ]
+    }),
+    summary: c => c.fields.length + (c.fields.length === 1 ? " field" : " fields"),
+    propsHTML: c => `
+      ${c.fields.map(f => `
+        <div class="demo-field" data-field-id="${f.id}">
+          <div class="demo-field-top">
+            <input class="input" style="flex:1;" data-action="demo-label" data-id="${f.id}" data-focus-id="demo-label-${f.id}" value="${esc(f.label)}"/>
+            <button class="icon-btn danger" data-action="demo-remove" data-id="${f.id}">${icon("trash","")}</button>
+          </div>
+          <div class="demo-type-row">
+            <button type="button" class="demo-type-btn ${f.type==="text"?"active":""}" data-action="demo-type" data-id="${f.id}" data-value="text">Free text</button>
+            <button type="button" class="demo-type-btn ${f.type==="select"?"active":""}" data-action="demo-type" data-id="${f.id}" data-value="select">Multiple choice</button>
+          </div>
+          ${f.type === "select" ? `<textarea class="textarea" rows="2" placeholder="Comma-separated options" data-action="demo-options" data-id="${f.id}" data-focus-id="demo-options-${f.id}">${esc(f.options.join(", "))}</textarea>` : ""}
+        </div>
+      `).join("")}
+      <button class="add-field-btn" data-action="demo-add">${icon("plus","")} Add field</button>
+    `,
+    runHTML: (c, value) => {
+      const vals = value || {};
+      return `
+      <div class="run-wrap">
+        <h2 class="run-headline">A little about you</h2>
+        ${c.fields.map(f => `
+          <div class="field demo-field-preview">
+            <div class="field-label">${esc(f.label)}</div>
+            ${f.type === "select" ? `
+              <select class="select" data-action="demo-answer" data-id="${f.id}">
+                <option value="" disabled ${!vals[f.id]?"selected":""}>Select…</option>
+                ${f.options.map(o => `<option value="${esc(o)}" ${vals[f.id]===o?"selected":""}>${esc(o)}</option>`).join("")}
+              </select>` : `
+              <input class="input" data-action="demo-answer" data-id="${f.id}" data-focus-id="demo-answer-${f.id}" value="${esc(vals[f.id]||"")}"/>`}
+          </div>
+        `).join("")}
+        <button class="btn btn-primary" data-action="run-next">Continue</button>
+      </div>`;
+    },
+    resultsView: { type: "demographics" }
+  },
+
+  openended: {
+    label: "Open-ended feedback", group: "question", icon: "message",
+    description: "Free-text response to a custom prompt.",
+    defaultConfig: () => ({ prompt: "Is there anything else about this experience you'd like to share?", placeholder: "Type your thoughts…" }),
+    summary: c => esc(c.prompt),
+    propsHTML: c => `
+      ${fieldTextarea("Prompt", "prompt", c.prompt, 3)}
+      ${fieldText("Placeholder text", "placeholder", c.placeholder)}
+    `,
+    runHTML: (c, value) => `
+      <div class="run-wrap">
+        <h2 class="run-headline">${esc(c.prompt)}</h2>
+        <textarea class="textarea" rows="6" placeholder="${esc(c.placeholder)}" data-action="openended-answer" data-focus-id="openended-answer">${esc(value||"")}</textarea>
+        <button class="btn btn-primary" style="margin-top:14px;" data-action="run-next">Continue</button>
+      </div>`,
+    resultsView: { type: "text-list" }
+  },
+
+  thankyou: {
+    label: "Thank you", group: "structure", icon: "checkCircle", singleton: true,
+    description: "Closing screen shown at the end of the study.",
+    defaultConfig: () => ({ headline: "That's everything — thank you.", message: "Your responses help shape a better product. We appreciate your time." }),
+    summary: c => esc(c.headline),
+    propsHTML: c => `
+      ${fieldText("Headline", "headline", c.headline)}
+      ${fieldTextarea("Message", "message", c.message, 3)}
+    `,
+    runHTML: c => `
+      <div class="run-wrap center">
+        <div class="thankyou-icon">${icon("checkCircle","")}</div>
+        <h2 class="run-headline lg">${esc(c.headline)}</h2>
+        <p class="run-body-text">${esc(c.message)}</p>
+        <button class="btn" data-action="run-next">Continue</button>
+      </div>`,
+    resultsView: null
+  }
+};
+
+/* ---- field-template helpers used by propsHTML above ---- */
+function fieldText(label, key, val, placeholder, hint) {
+  return `<div class="field">
+    <div class="field-label">${esc(label)}</div>
+    <input class="input" data-action="set-field" data-field="${key}" data-focus-id="prop-${key}" value="${esc(val)}" ${placeholder ? `placeholder="${esc(placeholder)}"` : ""}/>
+    ${hint ? `<div class="field-hint">${esc(hint)}</div>` : ""}
+  </div>`;
+}
+function fieldTextarea(label, key, val, rows, hint) {
+  return `<div class="field">
+    <div class="field-label">${esc(label)}</div>
+    <textarea class="textarea" rows="${rows||3}" data-action="set-field" data-field="${key}" data-focus-id="prop-${key}">${esc(val)}</textarea>
+    ${hint ? `<div class="field-hint">${esc(hint)}</div>` : ""}
+  </div>`;
+}
+function fieldToggle(key, checked, label, groupLabel) {
+  return `<div class="field">
+    ${groupLabel ? `<div class="field-label">${esc(groupLabel)}</div>` : ""}
+    <button type="button" class="toggle-row" data-action="toggle-field" data-field="${key}">
+      <span class="toggle-track ${checked?"on":""}"><span class="toggle-thumb"></span></span>
+      <span class="toggle-label">${esc(label)}</span>
+    </button>
+  </div>`;
+}
+
+/* =========================================================================
+   PERSISTENCE — studies live in localStorage so the dashboard, publish
+   links and results survive a page reload, like a lightweight backend.
+   ========================================================================= */
+const STORAGE_KEY = "researchkit:data:v1";
+let memoryFallback = null;
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* storage unavailable — fall back to memory */ }
+  if (memoryFallback) return memoryFallback;
+  return seedData();
+}
+function saveData(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+  catch (e) { memoryFallback = data; }
+}
+function makeBlock(type) { return { id: uid(), type, config: BLOCK_REGISTRY[type].defaultConfig() }; }
+function seedData() {
+  const study = {
+    id: uid(),
+    title: "Checkout flow — usability study",
+    description: "Unmoderated study testing the redesigned checkout prototype.",
+    status: "draft",
+    acceptingResponses: true,
+    themeColor: DEFAULT_THEME_HEX,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    blocks: [
+      makeBlock("welcome"), makeBlock("task"), makeBlock("seq"),
+      makeBlock("demographics"), makeBlock("sus"), makeBlock("openended"), makeBlock("thankyou")
+    ],
+    responses: []
+  };
+  const data = { studies: {}, order: [study.id] };
+  data.studies[study.id] = study;
+  saveData(data);
+  return data;
+}
+
+const db = loadData();
+function persist() {
+  if (!db.order) return;
+  saveData(db);
+  try { lastRawSnapshot = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+  scheduleSync();
+}
+
+/* Keep this tab's view of the data fresh when a response (or edit) is saved
+   from another tab/window — e.g. a participant completing the study via the
+   published link in a separate tab while the admin has Results open here.
+   We listen for the 'storage' event (fires in other same-origin tabs),
+   refresh on tab focus, and fall back to light polling for reliability. */
+let lastRawSnapshot = (() => { try { return localStorage.getItem(STORAGE_KEY); } catch (e) { return null; } })();
+function refreshFromStorageIfChanged() {
+  let raw;
+  try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { return; }
+  if (raw == null || raw === lastRawSnapshot) return;
+  lastRawSnapshot = raw;
+  try {
+    const fresh = JSON.parse(raw);
+    db.studies = fresh.studies;
+    db.order = fresh.order;
+    render();
+  } catch (e) { /* ignore malformed snapshot */ }
+}
+window.addEventListener("storage", (e) => { if (!e.key || e.key === STORAGE_KEY) refreshFromStorageIfChanged(); });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshFromStorageIfChanged(); });
+setInterval(refreshFromStorageIfChanged, 1500);
+
+/* =========================================================================
+   SYNC — optional Google Sheets backend (via a tiny Google Apps Script web
+   app the researcher deploys once). Makes published links work for anyone,
+   on any device, and brings responses back into Results.
+   Sheets used: "Studies" (published study JSON) and "Responses".
+   ========================================================================= */
+const SYNC_KEY = "researchkit:sync";
+let sync = (() => { try { return JSON.parse(localStorage.getItem(SYNC_KEY)) || null; } catch (e) { return null; } })();
+function saveSync() { try { if (sync) localStorage.setItem(SYNC_KEY, JSON.stringify(sync)); else localStorage.removeItem(SYNC_KEY); } catch (e) {} }
+const syncState = { hash: {}, status: {}, remote: {}, resp: {}, timer: null };
+function genAdminKey() {
+  const a = new Uint8Array(18);
+  (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.floor(Math.random() * 256));
+  return Array.from(a, b => b.toString(36).padStart(2, "0")).join("").slice(0, 24);
+}
+function appsScriptCode(key) {
+  return `// ResearchKit backend — paste into script.google.com (Extensions > Apps Script) from a Google Sheet
+const KEY = '${key}';
+function sh_(n, h) { const ss = SpreadsheetApp.getActiveSpreadsheet(); let s = ss.getSheetByName(n); if (!s) { s = ss.insertSheet(n); s.appendRow(h); } return s; }
+function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function studyRow_(id) {
+  const rows = sh_('Studies', ['id', 'json', 'updatedAt']).getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) if (String(rows[i][0]) === id) return { row: i + 1, study: JSON.parse(rows[i][1]) };
+  return null;
+}
+function doGet(e) {
+  const p = e.parameter;
+  if (p.action === 'ping') return out_({ ok: true });
+  if (p.action === 'study') { const r = studyRow_(p.id); return out_(r ? { ok: true, study: r.study } : { ok: false, error: 'not_found' }); }
+  if (p.action === 'responses') {
+    if (p.key !== KEY) return out_({ ok: false, error: 'forbidden' });
+    const rows = sh_('Responses', ['studyId', 'responseId', 'submittedAt', 'json']).getDataRange().getValues();
+    const list = [];
+    for (let i = 1; i < rows.length; i++) if (String(rows[i][0]) === p.id) list.push(JSON.parse(rows[i][3]));
+    return out_({ ok: true, responses: list });
+  }
+  return out_({ ok: false, error: 'bad_action' });
+}
+function doPost(e) {
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const d = JSON.parse(e.postData.contents);
+    if (d.action === 'publish') {
+      if (d.key !== KEY) return out_({ ok: false, error: 'forbidden' });
+      const json = JSON.stringify(d.study);
+      if (json.length > 49000) return out_({ ok: false, error: 'study_too_large' });
+      const s = sh_('Studies', ['id', 'json', 'updatedAt']); const r = studyRow_(d.study.id);
+      if (r) s.getRange(r.row, 1, 1, 3).setValues([[d.study.id, json, new Date()]]); else s.appendRow([d.study.id, json, new Date()]);
+      return out_({ ok: true });
+    }
+    if (d.action === 'submit') {
+      const r = studyRow_(d.id);
+      if (!r || r.study.status !== 'published') return out_({ ok: false, error: 'not_found' });
+      if (!r.study.acceptingResponses) return out_({ ok: false, error: 'closed' });
+      const s = sh_('Responses', ['studyId', 'responseId', 'submittedAt', 'json']);
+      const rows = s.getDataRange().getValues();
+      for (let i = 1; i < rows.length; i++) if (String(rows[i][1]) === d.response.id) return out_({ ok: true, duplicate: true });
+      s.appendRow([d.id, d.response.id, new Date(d.response.submittedAt), JSON.stringify(d.response)]);
+      return out_({ ok: true });
+    }
+    return out_({ ok: false, error: 'bad_action' });
+  } finally { lock.releaseLock(); }
+}`;
+}
+async function apiGet(url, params) {
+  const u = new URL(url);
+  Object.keys(params).forEach(k => u.searchParams.set(k, params[k]));
+  const r = await fetch(u.toString());
+  return r.json();
+}
+async function apiPost(url, body) {
+  const text = JSON.stringify(body);
+  try {
+    const r = await fetch(url, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: text });
+    return await r.json();
+  } catch (e) {
+    // Some browsers refuse to expose the redirected Apps Script reply; the write still lands.
+    await fetch(url, { method: "POST", mode: "no-cors", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: text });
+    return { ok: true, opaque: true };
+  }
+}
+function studyForSync(study) {
+  const c = JSON.parse(JSON.stringify(study));
+  delete c.responses;
+  return c;
+}
+function studyHash(study) { return JSON.stringify(studyForSync(study).blocks) + "|" + [study.title, study.description, study.status, study.acceptingResponses, study.themeColor, study.bgColor].join("|"); }
+function syncErrorText(code) {
+  return ({ forbidden: "The admin key doesn't match. Re-copy the script from Sharing setup and redeploy it.",
+    study_too_large: "This study is too big for one sheet cell (50k characters). Shorten some text.",
+    not_found: "Study not found in the sheet.", closed: "This study has stopped accepting responses." })[code] || ("Sync problem: " + code);
+}
+async function pushStudy(study, force) {
+  if (!sync || !sync.url || study.status !== "published") return;
+  const h = studyHash(study);
+  if (!force && syncState.hash[study.id] === h) return;
+  syncState.hash[study.id] = h;
+  syncState.status[study.id] = { state: "syncing" };
+  render();
+  try {
+    const r = await apiPost(sync.url, { action: "publish", key: sync.key, study: studyForSync(study) });
+    syncState.status[study.id] = r.ok ? { state: "ok", t: Date.now() } : { state: "error", msg: syncErrorText(r.error) };
+    if (!r.ok) delete syncState.hash[study.id];
+  } catch (e) {
+    syncState.status[study.id] = { state: "error", msg: "Couldn't reach Google Sheets. Check your connection and the web app URL." };
+    delete syncState.hash[study.id];
+  }
+  render();
+}
+function syncPushDirty() {
+  if (!sync || !sync.url) return;
+  db.order.forEach(id => { const st = db.studies[id]; if (st) pushStudy(st, false); });
+}
+function scheduleSync() {
+  if (!sync || !sync.url) return;
+  clearTimeout(syncState.timer);
+  syncState.timer = setTimeout(syncPushDirty, 900);
+}
+function getRemoteStudy(id, api) {
+  let st = syncState.remote[id];
+  if (st) return st;
+  st = syncState.remote[id] = { state: "loading" };
+  apiGet(api, { action: "study", id }).then(r => {
+    if (r.ok && r.study) { r.study.responses = []; syncState.remote[id] = { state: "ready", study: r.study }; }
+    else syncState.remote[id] = { state: "error", error: r.error || "not_found" };
+  }).catch(() => { syncState.remote[id] = { state: "error", error: "network" }; }).then(() => render());
+  return st;
+}
+function fetchResponses(id, force) {
+  if (!sync || !sync.url) return;
+  const study = db.studies[id];
+  if (!study || study.status !== "published") return;
+  const st = syncState.resp[id] || (syncState.resp[id] = { list: [], t: 0, loading: false, error: null });
+  if (st.loading || (!force && Date.now() - st.t < 8000)) return;
+  st.loading = true;
+  apiGet(sync.url, { action: "responses", id, key: sync.key })
+    .then(r => { if (r.ok) { st.list = r.responses || []; st.error = null; } else st.error = syncErrorText(r.error); })
+    .catch(() => { st.error = "Couldn't reach Google Sheets."; })
+    .then(() => { st.loading = false; st.t = Date.now(); render(); });
+}
+function getResponses(study) {
+  const local = study.responses || [];
+  const st = syncState.resp[study.id];
+  if (!st || !st.list.length) return local;
+  const seen = new Set(local.map(r => r.id));
+  return local.concat(st.list.filter(r => !seen.has(r.id)));
+}
+setInterval(() => {
+  if (!sync || !sync.url) return;
+  const r = parseRoute();
+  if (r.view === "results") fetchResponses(r.id, false);
+  else if (r.view === "dashboard") db.order.forEach(id => fetchResponses(id, false));
+}, 10000);
+
+/* =========================================================================
+   ROUTER
+   ========================================================================= */
+function parseRoute() {
+  const raw = location.hash.replace(/^#\/?/, "");
+  const qi = raw.indexOf("?");
+  const h = qi >= 0 ? raw.slice(0, qi) : raw;
+  let api = null;
+  if (qi >= 0) { try { api = new URLSearchParams(raw.slice(qi + 1)).get("api"); } catch (e) {} }
+  const parts = h.split("/").filter(Boolean);
+  if (parts[0] === "study" && parts[1] && parts[2] === "edit") return { view: "edit", id: parts[1] };
+  if (parts[0] === "study" && parts[1] && parts[2] === "results") return { view: "results", id: parts[1] };
+  if (parts[0] === "take" && parts[1]) return { view: "take", id: parts[1], api };
+  return { view: "dashboard" };
+}
+function navigate(hash) { location.hash = hash; }
+
+/* transient UI state (not persisted) */
+const ui = {
+  selectedBlockId: null,
+  openMenu: null,        // 'task' | 'question' | studyId (kebab menu) | null
+  publishModal: null,    // studyId when open
+  copied: false,
+  resultsTab: "summary",
+  take: null,            // { step, responses, finished, modalConfig }
+  themeHSLDraft: null,    // { studyId, h, s, l } — live precision while dragging the accent sliders
+  bgHSLDraft: null,        // same, for the background colour picker
+  newStudyModal: false,
+  syncModal: false, syncUrlDraft: null, syncKeyDraft: null, syncMsg: null, scriptCopied: false
+};
+
+/* =========================================================================
+   RENDER — router entry point
+   ========================================================================= */
+const root = document.getElementById("root");
+
+function captureFocus() {
+  const el = document.activeElement;
+  if (!el || !el.dataset || !el.dataset.focusId) return null;
+  return { id: el.dataset.focusId, start: el.selectionStart, end: el.selectionEnd };
+}
+function restoreFocus(info) {
+  if (!info) return;
+  const el = root.querySelector(`[data-focus-id="${info.id}"]`);
+  if (!el) return;
+  el.focus();
+  if (typeof info.start === "number" && el.setSelectionRange) {
+    try { el.setSelectionRange(info.start, info.end); } catch (e) {}
+  }
+}
+
+function render() {
+  const focusInfo = captureFocus();
+  const route = parseRoute();
+
+  if (route.view === "take") {
+    let study;
+    if (route.api) {
+      const st = getRemoteStudy(route.id, route.api);
+      if (st.state === "loading") { root.innerHTML = `<div class="app"><div class="closed-notice">${icon("inbox","")}<h2>Loading study…</h2></div></div>`; return; }
+      if (st.state === "error") { root.innerHTML = `<div class="app"><div class="closed-notice">${icon("inbox","")}<h2>${st.error === "network" ? "Couldn't load this study" : "Study not found"}</h2><p>${st.error === "network" ? "Check your internet connection and reload the page." : "This link may be wrong or the study hasn't been published yet."}</p></div></div>`; return; }
+      study = st.study;
+    } else study = db.studies[route.id];
+    applyThemeColor(study ? study.themeColor : DEFAULT_THEME_HEX);
+    if (study && study.bgColor) applyBackgroundColor(study.bgColor); else clearBackgroundOverride();
+    root.innerHTML = renderTake(study, route.id);
+  } else if (route.view === "edit" && db.studies[route.id]) {
+    applyThemeColor(db.studies[route.id].themeColor);
+    if (db.studies[route.id].bgColor) applyBackgroundColor(db.studies[route.id].bgColor); else clearBackgroundOverride();
+    root.innerHTML = renderStudioShell(db.studies[route.id], "edit");
+  } else if (route.view === "results" && db.studies[route.id]) {
+    applyThemeColor(db.studies[route.id].themeColor);
+    if (db.studies[route.id].bgColor) applyBackgroundColor(db.studies[route.id].bgColor); else clearBackgroundOverride();
+    root.innerHTML = renderStudioShell(db.studies[route.id], "results");
+  } else {
+    applyThemeColor(DEFAULT_THEME_HEX);
+    clearBackgroundOverride();
+    root.innerHTML = renderDashboard();
+  }
+  restoreFocus(focusInfo);
+  if (sync && sync.url) {
+    if (route.view === "results") fetchResponses(route.id, false);
+    else if (route.view === "dashboard") db.order.forEach(id => fetchResponses(id, false));
+  }
+}
+window.addEventListener("hashchange", render);
+applyColorScheme(loadColorScheme());
+
+/* =========================================================================
+   DASHBOARD
+   ========================================================================= */
+function themeToggleButton() {
+  const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+  return `<button class="btn icon-only-btn" data-action="toggle-color-scheme" title="${isDark ? "Switch to light mode" : "Switch to dark mode"}">${icon(isDark ? "sun" : "moon", "")}</button>`;
+}
+
+function renderDashboard() {
+  const studies = db.order.map(id => db.studies[id]).filter(Boolean);
+  const cards = studies.map(s => {
+    const respCount = getResponses(s).length;
+    return `
+    <div class="study-card" data-action="open-study" data-id="${s.id}">
+      <div class="study-card-top">
+        <div class="study-card-title">${esc(s.title || "Untitled study")}</div>
+        <div class="study-card-menu">
+          <button class="kebab-btn" data-action="toggle-card-menu" data-id="${s.id}">${icon("kebab","")}</button>
+          ${ui.openMenu === s.id ? `
+          <div class="menu-pop" data-stop="1">
+            <button class="menu-item" data-action="open-results" data-id="${s.id}">${icon("bar","")} View results</button>
+            <button class="menu-item" data-action="duplicate-study" data-id="${s.id}">${icon("copy","")} Duplicate</button>
+            <button class="menu-item danger" data-action="delete-study" data-id="${s.id}">${icon("trash","")} Delete</button>
+          </div>` : ""}
+        </div>
+      </div>
+      <div class="study-card-desc">${esc(s.description || "No description yet.")}</div>
+      <div class="study-card-meta">
+        <span class="status-badge ${s.status==='published'?'status-published':'status-draft'}">${s.status==='published'?'Published':'Draft'}</span>
+        <span>${s.blocks.length} blocks</span>
+        <span>${respCount} response${respCount===1?"":"s"}</span>
+      </div>
+    </div>`;
+  }).join("");
+
+  return `
+    <div class="app">
+      <header class="topbar">
+        <div class="crumbs">
+          <span class="brand-name" style="display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:700;font-size:17px;color:var(--ink);">
+            <span style="width:26px;height:26px;border-radius:7px;background:linear-gradient(135deg, var(--pine-500), var(--purple-500));display:flex;align-items:center;justify-content:center;color:#fff;">${icon("layers","")}</span>
+            ResearchKit
+          </span>
+        </div>
+        <div class="topbar-actions">${themeToggleButton()}</div>
+      </header>
+      <div class="dash">
+        <div class="dash-inner">
+          <div class="dash-head">
+            <div>
+              <div class="dash-title">My studies</div>
+              <div class="dash-sub">Build unmoderated usability studies, publish a link, and review results here.</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <button class="btn btn-lg" data-action="open-sync">${icon("inbox","")} ${sync && sync.url ? "Sharing: connected" : "Sharing setup"}</button>
+              <button class="btn btn-primary btn-lg" data-action="open-new-study-modal">${icon("plus","")} New study</button>
+            </div>
+          </div>
+          ${studies.length ? `<div class="study-grid">${cards}
+            <button class="new-study-card" data-action="open-new-study-modal">${icon("plus","")}<span style="font-size:13px;">New study</span></button>
+          </div>` : `
+          <div class="study-grid">
+            <button class="new-study-card" data-action="open-new-study-modal">${icon("plus","")}<span style="font-size:13px;">New study</span></button>
+          </div>
+          <div class="dash-empty">${decorativeBloom("")}No studies yet — create your first one to get started.</div>`}
+        </div>
+      </div>
+      ${ui.newStudyModal ? renderNewStudyModal() : ""}
+      ${ui.syncModal ? renderSyncModal() : ""}
+    </div>`;
+}
+
+function renderNewStudyModal() {
+  const options = ["sus", "seq", "abtest", "blank"].map(key => {
+    const t = STUDY_TEMPLATES[key];
+    return `
+      <button class="template-option" data-action="create-study" data-template="${key}">
+        <span class="template-option-icon">${icon(t.icon,"")}</span>
+        <span class="template-option-text">
+          <span class="template-option-title">${esc(t.label)}</span>
+          <span class="template-option-desc">${esc(t.description)}</span>
+        </span>
+      </button>`;
+  }).join("");
+  return `
+    <div class="modal-backdrop" data-action="close-new-study-modal">
+      <div class="modal-box template-modal" data-stop="1">
+        <div class="publish-body">
+          <div class="publish-icon-row">
+            <div class="publish-icon">${icon("wand","")}</div>
+            <div>
+              <div class="publish-heading">New study</div>
+              <div class="publish-sub">Start from a template, or build your own from scratch.</div>
+            </div>
+          </div>
+          <div class="template-options">${options}</div>
+        </div>
+        <div class="publish-foot">
+          <button class="btn" data-action="close-new-study-modal">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+/* =========================================================================
+   STUDIO SHELL (builder + results share this header/tabs)
+   ========================================================================= */
+function renderStudioShell(study, tab) {
+  const svg = icon("arrowLeft","");
+  return `
+    <div class="app">
+      <header class="topbar">
+        <div class="crumbs"><a href="#/dashboard">${svg} My studies</a></div>
+        <div class="topbar-center">
+          <input class="topbar-title-input" data-action="set-study-title" data-focus-id="study-title-top" value="${esc(study.title)}"/>
+          <span class="status-badge ${study.status==='published'?'status-published':'status-draft'}">${study.status==='published'?'Published':'Draft'}</span>
+        </div>
+        <div class="tabs">
+          <button class="tab-btn ${tab==='edit'?'active':''}" data-action="goto-tab" data-tab="edit" data-id="${study.id}">Edit</button>
+          <button class="tab-btn ${tab==='results'?'active':''}" data-action="goto-tab" data-tab="results" data-id="${study.id}">Results${getResponses(study).length?` (${getResponses(study).length})`:""}</button>
+        </div>
+        <div class="topbar-actions">
+          ${themeToggleButton()}
+          <button class="btn" data-action="open-runner-preview">${icon("eye","")} Preview</button>
+          <button class="btn btn-primary" data-action="open-publish" data-id="${study.id}">${icon("send","")} Publish</button>
+        </div>
+      </header>
+      ${tab === "edit" ? renderBuilderMain(study) : renderResultsMain(study)}
+      ${ui.publishModal === study.id ? renderPublishModal(study) : ""}
+      ${ui.runnerPreview ? renderRunnerOverlay(study) : ""}
+      ${ui.syncModal ? renderSyncModal() : ""}
+    </div>`;
+}
+
+/* =========================================================================
+   BUILDER — left add-panel / canvas / right properties
+   ========================================================================= */
+function renderBuilderMain(study) {
+  return `<div class="main">${renderAddPanel(study)}${renderCanvas(study)}${renderRightPanel(study)}</div>`;
+}
+
+function addMenuHTML(kind) {
+  const types = Object.entries(BLOCK_REGISTRY).filter(([, m]) => m.group === kind);
+  return `
+    <div class="add-menu" data-stop="1">
+      ${types.map(([type, meta]) => `
+        <button class="add-menu-item" data-action="add-block" data-type="${type}">
+          <span class="add-menu-icon icon-tint-${meta.group}">${icon(meta.icon,"")}</span>
+          <span>
+            <div class="add-menu-title">${esc(meta.label)}</div>
+            <div class="add-menu-desc">${esc(meta.description)}</div>
+          </span>
+        </button>
+      `).join("")}
+    </div>`;
+}
+
+function renderAddPanel(study) {
+  const structure = Object.entries(BLOCK_REGISTRY).filter(([, m]) => m.group === "structure");
+  return `
+    <aside class="sidebar-left">
+      <div class="add-actions">
+        <div class="add-actions-label">Add to your flow</div>
+        <div class="add-btn">
+          <button class="add-btn-main" data-action="toggle-add-menu" data-kind="task">${icon("cursor","")}<span class="grow">Add task block</span>${icon("plus","")}</button>
+          ${ui.openMenu === "task" ? addMenuHTML("task") : ""}
+        </div>
+        <div class="add-btn">
+          <button class="add-btn-main alt" data-action="toggle-add-menu" data-kind="question">${icon("gauge","")}<span class="grow">Add question block</span>${icon("plus","")}</button>
+          ${ui.openMenu === "question" ? addMenuHTML("question") : ""}
+        </div>
+      </div>
+      <div class="lib-scroll">
+        <div class="lib-group-label">Structure</div>
+        ${structure.map(([type, meta]) => `
+          <button class="lib-item" data-action="add-block" data-type="${type}" title="${esc(meta.description)}">
+            <span class="lib-icon icon-tint-${meta.group}">${icon(meta.icon,"")}</span>
+            <span class="lib-title">${esc(meta.label)}</span>
+          </button>
+        `).join("")}
+      </div>
+      <div class="lib-footer">Structure blocks (welcome and thank-you) appear once per study — click to jump to them if already added.</div>
+    </aside>`;
+}
+
+function renderCanvas(study) {
+  const blocksHTML = study.blocks.map((block, i) => {
+    const meta = BLOCK_REGISTRY[block.type];
+    return `
+      <div class="block-card ${ui.selectedBlockId===block.id?"selected":""}" draggable="true"
+           data-block-id="${block.id}" data-index="${i}" data-action="select-block">
+        <div class="block-row">
+          <span class="grip">${icon("grip","")}</span>
+          <span class="num-badge">${i+1}</span>
+          <span class="block-icon icon-tint-${meta.group}">${icon(meta.icon,"")}</span>
+          <div class="block-meta">
+            <div class="block-title">${esc(meta.label)}</div>
+            <div class="block-summary">${meta.summary(block.config)}</div>
+          </div>
+          <div class="block-actions">
+            <button class="icon-btn" data-action="move-block" data-id="${block.id}" data-dir="-1" ${i===0?"disabled":""}>${icon("chevronUp","")}</button>
+            <button class="icon-btn" data-action="move-block" data-id="${block.id}" data-dir="1" ${i===study.blocks.length-1?"disabled":""}>${icon("chevronDown","")}</button>
+            ${!meta.singleton ? `<button class="icon-btn" data-action="duplicate-block" data-id="${block.id}">${icon("copy","")}</button>` : ""}
+            <button class="icon-btn danger" data-action="delete-block" data-id="${block.id}">${icon("trash","")}</button>
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+
+  return `
+    <main class="canvas">
+      <div class="canvas-inner">
+        <textarea class="study-desc" rows="1" data-action="set-study-desc" data-focus-id="study-desc" placeholder="Add a short description for your team…">${esc(study.description)}</textarea>
+        <div class="flow">${blocksHTML}</div>
+        ${study.blocks.length===0 ? `<div class="empty-flow">${decorativeBloom("")}Your flow is empty. Use “Add task block” or “Add question block” on the left to get started.</div>` : ""}
+      </div>
+    </main>`;
+}
+
+const THEME_PRESETS = ["#0E7C7B", "#E2A32D", "#C34A25", "#6B2D8C", "#1E8A56", "#D14C82"];
+const BG_PRESETS = ["#F7EFDF", "#FDF6ED", "#EFF1EC", "#22201D", "#1E2430", "#F3EAF6"];
+
+/* Generic H/S/L "art app" mixer — used for both the button/accent colour
+   and the background colour pickers below, parametrised by an action prefix
+   so both can be driven by the same slider/hex/preset event handlers pattern. */
+function renderColorPicker({ prefix, labelText, iconName, hex, presets, showReset }) {
+  const { h, s, l } = hexToHSL(hex);
+  const hueBg = `linear-gradient(to right, hsl(0,${s}%,${l}%), hsl(60,${s}%,${l}%), hsl(120,${s}%,${l}%), hsl(180,${s}%,${l}%), hsl(240,${s}%,${l}%), hsl(300,${s}%,${l}%), hsl(360,${s}%,${l}%))`;
+  const satBg = `linear-gradient(to right, hsl(${h},0%,${l}%), hsl(${h},100%,${l}%))`;
+  const lightBg = `linear-gradient(to right, hsl(${h},${s}%,0%), hsl(${h},${s}%,50%), hsl(${h},${s}%,100%))`;
+  return `
+    <div class="theme-picker" data-stop="1">
+      <div class="theme-picker-label">${icon(iconName,"")} ${esc(labelText)}</div>
+      <div class="theme-row">
+        <span class="theme-swatch" data-role="${prefix}-swatch" style="background:${hex};"></span>
+        <input class="input theme-hex" data-action="${prefix}-hex-input" data-role="${prefix}-hex" data-focus-id="${prefix}-hex" value="${esc(hex)}" maxlength="7" spellcheck="false"/>
+      </div>
+      <div class="theme-slider-group">
+        <div class="theme-slider-label"><span>Hue</span><span data-role="${prefix}-h-val">${h}</span></div>
+        <input type="range" class="theme-slider" data-action="${prefix}-h" data-role="${prefix}-h" min="0" max="360" value="${h}" style="background:${hueBg};"/>
+      </div>
+      <div class="theme-slider-group">
+        <div class="theme-slider-label"><span>Saturation</span><span data-role="${prefix}-s-val">${s}%</span></div>
+        <input type="range" class="theme-slider" data-action="${prefix}-s" data-role="${prefix}-s" min="0" max="100" value="${s}" style="background:${satBg};"/>
+      </div>
+      <div class="theme-slider-group">
+        <div class="theme-slider-label"><span>Lightness</span><span data-role="${prefix}-l-val">${l}%</span></div>
+        <input type="range" class="theme-slider" data-action="${prefix}-l" data-role="${prefix}-l" min="0" max="100" value="${l}" style="background:${lightBg};"/>
+      </div>
+      <div class="theme-presets">
+        ${presets.map(p => `<button type="button" class="theme-preset-swatch" data-action="${prefix}-preset" data-hex="${p}" style="background:${p};" title="${p}"></button>`).join("")}
+        ${showReset ? `<button type="button" class="theme-reset-link" data-action="bg-reset">Reset</button>` : ""}
+      </div>
+    </div>`;
+}
+function renderAccentPicker(study) {
+  return renderColorPicker({
+    prefix: "theme", labelText: "Button colour", iconName: "palette",
+    hex: study.themeColor || DEFAULT_THEME_HEX, presets: THEME_PRESETS, showReset: false
+  });
+}
+function renderBgPicker(study) {
+  return renderColorPicker({
+    prefix: "bg", labelText: "Background colour", iconName: "monitor",
+    hex: study.bgColor || DEFAULT_BG_HEX, presets: BG_PRESETS, showReset: true
+  });
+}
+
+function renderRightPanel(study) {
+  const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+  if (!block) {
+    const estMinutes = study.blocks.reduce((sum, b) => {
+      if (b.type === "task") return sum + 2;
+      if (b.type === "sus") return sum + 2;
+      if (b.type === "demographics") return sum + 1;
+      return sum + 0.5;
+    }, 0);
+    return `
+      <aside class="sidebar-right">
+        <div class="panel-body">
+          <div class="lib-group-label" style="margin-bottom:10px;">Study overview</div>
+          <div class="overview-card">
+            <div class="overview-row"><span class="k">Blocks</span><span class="v">${study.blocks.length}</span></div>
+            <div class="overview-row"><span class="k">Estimated time</span><span class="v">~${Math.round(estMinutes)} min</span></div>
+            <div class="overview-row"><span class="k">Responses</span><span class="v">${getResponses(study).length}</span></div>
+          </div>
+          ${renderAccentPicker(study)}
+          ${renderBgPicker(study)}
+          <div class="hint-text">Select a block in the canvas to edit its settings here.</div>
+        </div>
+      </aside>`;
+  }
+  const meta = BLOCK_REGISTRY[block.type];
+  return `
+    <aside class="sidebar-right">
+      <div class="panel-header">
+        <span class="block-icon icon-tint-${meta.group}" style="width:28px;height:28px;">${icon(meta.icon,"")}</span>
+        <div class="panel-header-text">
+          <div class="panel-header-title">${esc(meta.label)}</div>
+          <div class="panel-header-sub">Block settings</div>
+        </div>
+      </div>
+      <div class="panel-body">${meta.propsHTML(block.config)}</div>
+    </aside>`;
+}
+
+/* =========================================================================
+   PUBLISH MODAL
+   ========================================================================= */
+function shareLink(study) {
+  const base = location.href.split("#")[0];
+  const api = sync && sync.url ? "?api=" + encodeURIComponent(sync.url) : "";
+  return base + "#/take/" + study.id + api;
+}
+
+function renderSyncModal() {
+  const draftUrl = ui.syncUrlDraft != null ? ui.syncUrlDraft : (sync ? sync.url : "");
+  const key = (sync && sync.key) || ui.syncKeyDraft || (ui.syncKeyDraft = genAdminKey());
+  const msg = ui.syncMsg ? `<div class="sync-msg ${ui.syncMsg.ok ? "ok" : "err"}">${esc(ui.syncMsg.text)}</div>` : "";
+  return `
+    <div class="modal-backdrop" data-action="close-sync">
+      <div class="modal-box sync-modal" data-stop="1">
+        <div class="publish-body">
+          <div class="publish-icon-row">
+            <div class="publish-icon">${icon("inbox","")}</div>
+            <div>
+              <div class="publish-heading">Sharing setup</div>
+              <div class="publish-sub">Use a free Google Sheet as the place where studies are shared and responses are collected.</div>
+            </div>
+          </div>
+          <ol class="sync-steps">
+            <li>Create a new <b>Google Sheet</b>, then open <b>Extensions → Apps Script</b>.</li>
+            <li>Delete the sample code and paste this script (it contains your private admin key):
+              <div class="code-box">${esc(appsScriptCode(key))}</div>
+              <button class="btn" data-action="copy-script">${icon("copy","")} ${ui.scriptCopied ? "Copied" : "Copy script"}</button>
+            </li>
+            <li>Click <b>Deploy → New deployment → Web app</b>. Set <b>Execute as: Me</b> and <b>Who has access: Anyone</b>. Authorize when asked, then copy the <b>Web app URL</b>.</li>
+            <li>Paste the URL here:
+              <input class="sync-input" data-sync-url placeholder="https://script.google.com/macros/s/…/exec" value="${esc(draftUrl)}"/>
+            </li>
+          </ol>
+          <div class="sync-row">
+            <button class="btn" data-action="sync-test">Test connection</button>
+            <button class="btn btn-primary" data-action="sync-save">Save &amp; connect</button>
+            ${sync ? `<button class="btn" data-action="sync-disconnect">Disconnect</button>` : ""}
+          </div>
+          ${msg}
+          <div class="note-box" style="margin-top:14px;">Participants never see your admin key; only you (on this browser) can read the responses. If you edit the script later, re-deploy it as a <b>new version</b>.</div>
+          <div class="sync-section">
+            <h4>Backup &amp; move studies</h4>
+            <div class="publish-sub">Studies are stored in this browser. When you move to a hosted address (or another computer), export here and import there.</div>
+            <div class="sync-row">
+              <button class="btn" data-action="export-backup">Export backup</button>
+              <button class="btn" data-action="import-backup-pick">Import backup</button>
+              <input type="file" accept="application/json,.json" data-action="import-backup" style="display:none" id="rk-import"/>
+            </div>
+          </div>
+        </div>
+        <div class="publish-foot"><button class="btn" data-action="close-sync">Done</button></div>
+      </div>
+    </div>`;
+}
+
+function renderShareWarnings(study) {
+  let html = "";
+  if (!sync || !sync.url) {
+    html += `<div class="warn-box"><b>Not shareable yet.</b> Without a Google Sheets connection, this link only works in this browser. Connect one (about 3 minutes) so anyone can open the link and responses flow back to Results. <div class="sync-row"><button class="btn btn-primary" data-action="open-sync">Set up sharing</button></div></div>`;
+  } else {
+    const st = syncState.status[study.id];
+    if (study.status === "published" && st) {
+      if (st.state === "syncing") html += `<div class="note-box" style="margin-bottom:12px;">Syncing to Google Sheets…</div>`;
+      else if (st.state === "ok") html += `<div class="note-box" style="margin-bottom:12px;">${icon("checkCircle","")} Live on Google Sheets — participants can open the link.</div>`;
+      else html += `<div class="warn-box">${esc(st.msg)} <div class="sync-row"><button class="btn" data-action="resync" data-id="${study.id}">Retry</button></div></div>`;
+    }
+  }
+  if (location.protocol === "file:") {
+    html += `<div class="warn-box"><b>This file is opened from your computer.</b> Participants can't open a link that starts with file://. Upload this HTML file to a static host (e.g. drop it on netlify.com/drop), open the hosted address, and publish from there.</div>`;
+  }
+  return html;
+}
+function renderPublishModal(study) {
+  const link = shareLink(study);
+  return `
+    <div class="modal-backdrop" data-action="close-publish">
+      <div class="modal-box publish-modal" data-stop="1">
+        <div class="publish-body">
+          <div class="publish-icon-row">
+            <div class="publish-icon">${icon("send","")}</div>
+            <div>
+              <div class="publish-heading">Publish &amp; send</div>
+              <div class="publish-sub">Share this link with participants to start collecting responses.</div>
+            </div>
+          </div>
+          ${renderShareWarnings(study)}
+          <div class="link-row">
+            <div class="link-input">${esc(link)}</div>
+            <button class="btn" data-action="copy-link" data-link="${esc(link)}">${icon("copy","")} ${ui.copied ? "Copied" : "Copy"}</button>
+          </div>
+          <div class="share-row">
+            <button class="btn" data-action="share-email" data-id="${study.id}">${icon("send","")} Email link</button>
+            ${navigator.share ? `<button class="btn" data-action="share-native" data-id="${study.id}">${icon("send","")} Share…</button>` : ""}
+            <button class="btn" data-action="open-sync">${icon("inbox","")} Sharing setup</button>
+          </div>
+          <div class="accepting-row">
+            <div>
+              <div class="t">Accepting responses</div>
+              <div class="d">Turn off to pause new submissions without unpublishing.</div>
+            </div>
+            <button type="button" class="toggle-row" data-action="toggle-accepting" data-id="${study.id}">
+              <span class="toggle-track ${study.acceptingResponses?"on":""}"><span class="toggle-thumb"></span></span>
+            </button>
+          </div>
+          ${study.status !== "published" ? `<div class="note-box" style="margin-top:12px;">This study is still a draft. Publishing makes the link above active for participants.</div>` : ""}
+        </div>
+        <div class="publish-foot">
+          <button class="btn" data-action="close-publish">Close</button>
+          ${study.status !== "published" ? `<button class="btn btn-primary" data-action="do-publish" data-id="${study.id}">${icon("send","")} Publish study</button>` : `<span class="copied-tag">${icon("checkCircle","")} Live since ${fmtDate(study.publishedAt||study.updatedAt)}</span>`}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* =========================================================================
+   IN-BUILDER PREVIEW (ephemeral, doesn't record a response)
+   ========================================================================= */
+function renderRunnerOverlay(study) {
+  const p = ui.runnerPreview;
+  const blocks = study.blocks;
+
+  if (p.finished || !blocks[p.step]) {
+    const susBlock = blocks.find(b => b.type === "sus");
+    const susScore = susBlock ? scoreSUS(p.responses[susBlock.id]) : null;
+    const grade = susGrade(susScore);
+    const seqBlocks = blocks.filter(b => b.type === "seq");
+    return `
+      <div class="preview-overlay">
+        <div class="preview-body" style="padding-top:0;">
+          <div class="summary-wrap" style="max-width:480px;margin:0 auto;padding:56px 0;">
+            <div style="font-size:12px;font-weight:500;color:var(--faint);margin-bottom:4px;">Preview complete (not recorded)</div>
+            <h1 style="font-family:var(--font-display);font-size:26px;margin:0 0 24px;">Here's what a response looks like</h1>
+            ${susBlock ? `
+              <div class="score-card" style="border:1px solid var(--line);border-radius:8px;padding:18px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                  <span style="font-size:13px;font-weight:500;color:var(--ink);">SUS score</span>
+                  <span class="grade-pill grade-${grade.tone}" style="font-size:12px;padding:2px 9px;border-radius:999px;">${grade.label}</span>
+                </div>
+                <div class="score-num" style="font-family:var(--font-display);font-size:38px;">${susScore!=null?susScore.toFixed(1):"—"}<small style="font-size:16px;color:var(--faint);font-family:var(--font-sans);"> / 100</small></div>
+              </div>` : ""}
+            ${seqBlocks.map(b => `
+              <div class="seq-row">
+                <span>${esc(b.config.question)}</span>
+                <span>${p.responses[b.id] != null ? p.responses[b.id] : "—"} / 7</span>
+              </div>`).join("")}
+            <button class="btn btn-dark btn-block" style="margin-top:16px;" data-action="close-runner-preview">Back to editing</button>
+          </div>
+        </div>
+      </div>`;
+  }
+  const current = blocks[p.step];
+  const meta = BLOCK_REGISTRY[current.type];
+  const value = p.responses[current.id];
+  const progress = Math.round((p.step / blocks.length) * 100);
+  return `
+    <div class="preview-overlay">
+      <div class="preview-progress"><div class="preview-progress-bar" style="width:${progress}%"></div></div>
+      <div class="preview-topbar">
+        <span class="preview-step-label">Preview · step ${p.step+1} of ${blocks.length}</span>
+        <button class="exit-btn" data-action="close-runner-preview">${icon("x","")} Exit preview</button>
+      </div>
+      <div class="preview-body">${meta.runHTML(current.config, value)}</div>
+      ${p.modalConfig ? renderModal(p.modalConfig) : ""}
+    </div>`;
+}
+/* Figma sets anti-embedding headers on its normal /proto/ and /design/ pages
+   (to block clickjacking), but publishes a dedicated embeddable URL format
+   for exactly this use case. Rewrite Figma links to that format automatically
+   so they load inside the in-page modal instead of failing silently.
+
+   We also inject two of Figma's own prototype view parameters so the design
+   isn't fighting Figma's presentation chrome for space inside our frame:
+     - hide-ui=1        hides Figma's toolbar, footer, and comments sidebar
+     - scaling=scale-down  scales the frame down to fit without cropping,
+                           instead of sitting centered with padding
+   Either is skipped if the pasted link already specifies its own value,
+   so an intentional choice (e.g. a specific starting frame's scaling) is
+   never silently overridden. */
+function withFigmaViewParams(urlObj) {
+  if (!urlObj.searchParams.has("hide-ui")) urlObj.searchParams.set("hide-ui", "1");
+  if (!urlObj.searchParams.has("scaling")) urlObj.searchParams.set("scaling", "scale-down");
+  return urlObj;
+}
+function toEmbeddableUrl(rawUrl) {
+  if (!rawUrl) return rawUrl;
+  let u;
+  try { u = new URL(rawUrl); } catch (e) { return rawUrl; } // not a valid absolute URL — leave as-is
+  const host = u.hostname.toLowerCase();
+  if (host !== "figma.com" && !host.endsWith(".figma.com")) return rawUrl; // not a Figma link at all
+
+  if (host === "embed.figma.com") {
+    // Already Figma's direct embeddable host (what their own "Embed" code
+    // generates) — just make sure the view params are set.
+    return withFigmaViewParams(u).toString();
+  }
+  if (u.pathname === "/embed") {
+    // Already wrapped as figma.com/embed?embed_host=...&url=<inner> —
+    // apply the view params to the inner prototype link, not the wrapper.
+    const inner = u.searchParams.get("url");
+    if (inner) {
+      try {
+        const innerUrl = withFigmaViewParams(new URL(inner));
+        u.searchParams.set("url", innerUrl.toString());
+      } catch (e) { /* inner wasn't a valid absolute URL — leave wrapper untouched */ }
+    }
+    return u.toString();
+  }
+  if (/^\/(proto|design|file)\//.test(u.pathname)) {
+    // A normal share link — add the view params, then wrap it for embedding.
+    withFigmaViewParams(u);
+    return "https://www.figma.com/embed?embed_host=share&url=" + encodeURIComponent(u.toString());
+  }
+  return rawUrl;
+}
+/* Pulls the src="..." URL out of a pasted <iframe> embed snippet. We deliberately
+   don't inject the pasted markup as-is — tools like Figma hard-code a fixed
+   width/height on their snippet, which fights with our own frame sizing and is
+   exactly what made the preview render too small/cropped. Extracting just the
+   link and dropping it into our own iframe keeps sizing fully under our control,
+   the same way plain URL mode already works. */
+function extractSrcFromEmbed(html) {
+  if (!html) return "";
+  const match = html.match(/src\s*=\s*["']([^"']+)["']/i);
+  return match ? match[1] : "";
+}
+
+function renderModal(config) {
+  const isMobile = config.deviceType === "mobile";
+  const isEmbed = config.sourceType === "embed";
+  const rawUrl = config.prototypeUrl || "";
+  const embedSrc = isEmbed ? extractSrcFromEmbed(config.embedCode) : "";
+  const effectiveUrl = isEmbed ? embedSrc : rawUrl;
+  const domain = effectiveUrl
+    ? effectiveUrl.replace(/^https?:\/\//, "").split("/")[0]
+    : (isEmbed ? "Embed code" : "No URL set");
+  const head = isMobile
+    ? `<div class="modal-head chrome-mobile"><span class="mobile-notch"></span><button data-action="close-modal">${icon("x","")}</button></div>`
+    : `<div class="modal-head">
+         <span class="chrome-dots"><span class="chrome-dot red"></span><span class="chrome-dot yellow"></span><span class="chrome-dot green"></span></span>
+         <span class="chrome-url">${esc(domain)}</span>
+         <button data-action="close-modal">${icon("x","")}</button>
+       </div>`;
+  let bodyHTML;
+  if (effectiveUrl) {
+    bodyHTML = `<iframe src="${esc(toEmbeddableUrl(effectiveUrl))}" title="Prototype"></iframe>`;
+  } else if (isEmbed && config.embedCode) {
+    bodyHTML = `<div class="modal-empty">Couldn't find a link inside that embed code — double-check it includes a src="..." attribute.</div>`;
+  } else {
+    bodyHTML = `<div class="modal-empty">No prototype ${isEmbed ? "embed code" : "URL"} configured for this task.</div>`;
+  }
+  return `
+    <div class="modal-backdrop" data-action="close-modal">
+      <div class="modal-box ${isMobile ? "device-mobile" : "device-web"}" data-stop="1">
+        ${head}
+        <div class="modal-body">${bodyHTML}</div>
+        ${effectiveUrl ? `<div class="modal-fallback">Trouble loading? <a href="${esc(effectiveUrl)}" target="_blank" rel="noopener">Open in a new tab${icon("external","")}</a></div>` : ""}
+      </div>
+    </div>`;
+}
+
+/* =========================================================================
+   TAKE — the public participant-facing flow reached via the share link.
+   Completing it saves a real response into the study's results.
+   ========================================================================= */
+function renderTake(study, id) {
+  if (!study) {
+    return `<div class="app"><div class="closed-notice">${icon("inbox","")}<h2>Study not found</h2><p>This link doesn't match a study on this device.</p></div></div>`;
+  }
+  if (!study.acceptingResponses || study.status !== "published") {
+    return `<div class="app"><div class="closed-notice">${icon("inbox","")}<h2>Not accepting responses</h2><p>This study isn't currently open to participants. Please check back later.</p></div></div>`;
+  }
+  if (!ui.take || ui.take.studyId !== id) {
+    ui.take = { studyId: id, step: 0, responses: {}, finished: false, modalConfig: null };
+  }
+  const p = ui.take;
+  const blocks = study.blocks;
+
+  if (p.finished) {
+    return `
+      <div class="app">
+        <div class="closed-notice">
+          <div class="thankyou-icon" style="margin:0 auto 16px;">${icon("checkCircle","")}</div>
+          ${p.submitState === "sending" ? `<h2>Sending your answers…</h2><p>Please keep this page open.</p>`
+            : p.submitState === "error" ? `<h2>Couldn't send your answers</h2><p>${esc(p.submitError || "Something went wrong.")}</p><button class="btn btn-primary" style="margin-top:12px;" data-action="retry-submit">Try again</button>`
+            : `<h2>Response recorded</h2><p>Thanks for taking part — your answers have been submitted.</p>`}
+        </div>
+      </div>`;
+  }
+  const current = blocks[p.step];
+  if (!current) { p.finished = true; return renderTake(study, id); }
+  const meta = BLOCK_REGISTRY[current.type];
+  const value = p.responses[current.id];
+  const progress = Math.round((p.step / blocks.length) * 100);
+  return `
+    <div class="app">
+      <div class="preview-progress"><div class="preview-progress-bar" style="width:${progress}%"></div></div>
+      <div class="preview-body" style="padding-top:56px;">${meta.runHTML(current.config, value)}</div>
+      ${p.modalConfig ? renderModal(p.modalConfig) : ""}
+    </div>`;
+}
+
+/* =========================================================================
+   RESULTS
+   ========================================================================= */
+function computeSummary(study) {
+  const responses = getResponses(study);
+  const susBlock = study.blocks.find(b => b.type === "sus");
+  const susScores = susBlock ? responses.map(r => scoreSUS(r.answers[susBlock.id])).filter(v => v != null) : [];
+  const susAvg = susScores.length ? susScores.reduce((a,b)=>a+b,0) / susScores.length : null;
+  return { count: responses.length, susAvg, susGrade: susGrade(susAvg) };
+}
+
+function renderResultsSyncBar(study) {
+  if (study.status !== "published") return "";
+  if (!sync || !sync.url) return `<div class="warn-box">Responses from other people only appear here once sharing is set up. <div class="sync-row"><button class="btn btn-primary" data-action="open-sync">Set up sharing</button></div></div>`;
+  const st = syncState.resp[study.id] || {};
+  const when = st.t ? new Date(st.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : null;
+  const label = st.error ? `<span style="color:var(--rose-500)">${esc(st.error)}</span>` : st.loading && !when ? "Loading from Google Sheets…" : when ? "Synced with Google Sheets · updated " + when : "Connecting…";
+  return `<div class="sync-status"><span>${label}</span><button class="btn" data-action="refresh-results" data-id="${study.id}">${st.loading ? "Refreshing…" : "Refresh"}</button></div>`;
+}
+function renderResultsMain(study) {
+  return `<div class="results-wrap"><div class="results-inner">
+    <div class="results-tabs">
+      <button class="rtab ${ui.resultsTab==='summary'?'active':''}" data-action="set-results-tab" data-tab="summary">Summary</button>
+      <button class="rtab ${ui.resultsTab==='individual'?'active':''}" data-action="set-results-tab" data-tab="individual">Individual responses</button>
+    </div>
+    ${renderResultsSyncBar(study)}
+    ${getResponses(study).length === 0 ? `
+      <div class="results-empty">${decorativeBloom("")}<div>No responses yet. Publish your study and share the link to start collecting data.</div></div>
+    ` : ui.resultsTab === "summary" ? renderResultsSummary(study) : renderResultsIndividual(study)}
+  </div></div>`;
+}
+
+function renderResultsSummary(study) {
+  const s = computeSummary(study);
+  const susBlock = study.blocks.find(b => b.type === "sus");
+  const seqBlocks = study.blocks.filter(b => b.type === "seq");
+  const demoBlock = study.blocks.find(b => b.type === "demographics");
+  const openBlocks = study.blocks.filter(b => b.type === "openended");
+
+  const statCards = `
+    <div class="stat-grid">
+      <div class="stat-card"><div class="num">${s.count}</div><div class="lbl">Responses</div></div>
+      ${susBlock ? `<div class="stat-card"><div class="num">${s.susAvg!=null?s.susAvg.toFixed(1):"—"}<small> /100</small></div><div class="lbl">Average SUS score</div><span class="grade-pill grade-${s.susGrade.tone}">${s.susGrade.label}</span></div>` : ""}
+    </div>`;
+
+  const seqSection = seqBlocks.length ? `
+    <div class="section-title">Task ease (SEQ)</div>
+    ${seqBlocks.map(b => {
+      const vals = getResponses(study).map(r => r.answers[b.id]).filter(v => v != null);
+      const avg = vals.length ? vals.reduce((a,c)=>a+c,0)/vals.length : null;
+      return `
+      <div class="bar-row">
+        <div class="bar-row-top"><span class="q">${esc(b.config.question)}</span><span class="v">${avg!=null?avg.toFixed(1)+" / 7":"No data"}</span></div>
+        <div class="bar-track"><div class="bar-fill" style="width:${avg!=null?(avg/7*100):0}%"></div></div>
+      </div>`;
+    }).join("")}` : "";
+
+  const demoSection = demoBlock ? `
+    <div class="section-title">Demographics</div>
+    ${demoBlock.config.fields.map(f => {
+      const answers = getResponses(study).map(r => (r.answers[demoBlock.id]||{})[f.id]).filter(Boolean);
+      if (!answers.length) return `<div class="bar-row"><div class="bar-row-top"><span class="q">${esc(f.label)}</span><span class="v">No data</span></div></div>`;
+      if (f.type === "select") {
+        const counts = {};
+        answers.forEach(a => counts[a] = (counts[a]||0) + 1);
+        const max = Math.max(...Object.values(counts));
+        return `<div class="bar-row"><div class="bar-row-top"><span class="q">${esc(f.label)}</span></div>
+          ${Object.entries(counts).map(([opt,cnt]) => `
+            <div class="option-bar"><span class="lab">${esc(opt)}</span><div class="bar-track"><div class="bar-fill" style="width:${(cnt/max*100)}%"></div></div><span class="cnt">${cnt}</span></div>
+          `).join("")}
+        </div>`;
+      }
+      return `<div class="bar-row"><div class="bar-row-top"><span class="q">${esc(f.label)}</span></div>
+        ${answers.slice(0,6).map(a => `<div class="feedback-item">${esc(a)}</div>`).join("")}
+      </div>`;
+    }).join("")}` : "";
+
+  const abBlocks = study.blocks.filter(b => b.type === "abtest");
+  const abSection = abBlocks.map(b => {
+    const answers = getResponses(study).map(r => r.answers[b.id]).filter(Boolean);
+    const total = answers.length;
+    const countA = answers.filter(a => a.choice === "A").length;
+    const countB = answers.filter(a => a.choice === "B").length;
+    const countN = answers.filter(a => a.choice === "neutral").length;
+    const pct = n => total ? Math.round((n / total) * 100) : 0;
+    const strengths = answers.map(a => a.strength).filter(v => v != null);
+    const avgStrength = strengths.length ? (strengths.reduce((s,v)=>s+v,0) / strengths.length) : null;
+    const whys = answers.map(a => a.why).filter(Boolean);
+    return `
+      <div class="section-title">${esc(b.config.title)}</div>
+      ${total === 0 ? `<div class="hint-text">No responses yet.</div>` : `
+        <div class="ab-split-row">
+          <div class="ab-split-seg" style="flex:${Math.max(pct(countA),4)};background:var(--pine-500);" title="${esc(b.config.variantA.label)}: ${pct(countA)}%"></div>
+          <div class="ab-split-seg" style="flex:${Math.max(pct(countN),countN?4:0)};background:var(--line);" title="No preference: ${pct(countN)}%"></div>
+          <div class="ab-split-seg" style="flex:${Math.max(pct(countB),4)};background:var(--purple-500);" title="${esc(b.config.variantB.label)}: ${pct(countB)}%"></div>
+        </div>
+        <div class="ab-split-legend">
+          <span><span class="ab-legend-dot" style="background:var(--pine-500);"></span>${esc(b.config.variantA.label)} — ${countA} (${pct(countA)}%)</span>
+          ${countN ? `<span><span class="ab-legend-dot" style="background:var(--line);"></span>No preference — ${countN} (${pct(countN)}%)</span>` : ""}
+          <span><span class="ab-legend-dot" style="background:var(--purple-500);"></span>${esc(b.config.variantB.label)} — ${countB} (${pct(countB)}%)</span>
+        </div>
+        ${avgStrength != null ? `<div class="hint-text" style="margin:10px 0 4px;">Average preference strength: <strong style="color:var(--ink);">${avgStrength.toFixed(1)} / 5</strong></div>` : ""}
+        ${whys.length ? `<div style="margin-top:10px;">${whys.map(w => `<div class="feedback-item">${esc(w)}</div>`).join("")}</div>` : ""}
+      `}
+    `;
+  }).join("");
+
+  const openSection = openBlocks.map(b => {
+    const answers = getResponses(study).map(r => r.answers[b.id]).filter(Boolean);
+    return `
+      <div class="section-title">${esc(b.config.prompt)}</div>
+      ${answers.length ? answers.map(a => `<div class="feedback-item">${esc(a)}</div>`).join("") : `<div class="hint-text">No responses yet.</div>`}
+    `;
+  }).join("");
+
+  return statCards + seqSection + abSection + demoSection + openSection;
+}
+
+function renderResultsIndividual(study) {
+  const susBlock = study.blocks.find(b => b.type === "sus");
+  const rows = getResponses(study).slice().reverse().map(r => {
+    const susScore = susBlock ? scoreSUS(r.answers[susBlock.id]) : null;
+    const open = ui.expandedResponse === r.id;
+    return `
+      <div class="response-card">
+        <div class="response-head" data-action="toggle-response" data-id="${r.id}">
+          <span class="l">${fmtDate(r.submittedAt)}</span>
+          <span class="r">${susScore!=null?`SUS ${susScore.toFixed(0)}`:""} ${icon(open?"chevronUp":"chevronDown","")}</span>
+        </div>
+        <div class="response-body ${open?"open":""}">
+          ${study.blocks.filter(b => b.type !== "welcome" && b.type !== "thankyou" && b.type !== "task").map(b => {
+            const meta = BLOCK_REGISTRY[b.type];
+            const ans = r.answers[b.id];
+            let display = "—";
+            if (b.type === "seq") display = ans != null ? ans + " / 7" : "—";
+            else if (b.type === "sus") { const sc = scoreSUS(ans); display = sc != null ? sc.toFixed(1) + " / 100" : "—"; }
+            else if (b.type === "openended") display = ans || "—";
+            else if (b.type === "demographics") display = ans ? b.config.fields.map(f => `${f.label}: ${esc((ans[f.id])||"—")}`).join(" · ") : "—";
+            else if (b.type === "abtest") {
+              if (!ans || !ans.choice) display = "—";
+              else {
+                const chosenLabel = ans.choice === "A" ? b.config.variantA.label : ans.choice === "B" ? b.config.variantB.label : "No preference";
+                display = esc(chosenLabel) + (ans.strength ? ` · strength ${ans.strength}/5` : "") + (ans.why ? ` · "${esc(ans.why)}"` : "");
+              }
+            }
+            return `<div class="resp-row"><div class="resp-q">${esc(meta.label)}</div><div class="resp-a">${typeof display === "string" ? display : esc(String(display))}</div></div>`;
+          }).join("")}
+        </div>
+      </div>`;
+  }).join("");
+  return `<div>${rows}</div>`;
+}
+
+/* =========================================================================
+   ACTIONS — dashboard
+   ========================================================================= */
+const STUDY_TEMPLATES = {
+  sus: {
+    label: "SUS test",
+    description: "A focused System Usability Scale survey — welcome, the 10-item SUS questionnaire, then thank you.",
+    icon: "clipboard",
+    build: () => [makeBlock("welcome"), makeBlock("sus"), makeBlock("thankyou")]
+  },
+  seq: {
+    label: "Task test with SEQ",
+    description: "A single prototype task with an immediate Single Ease Question afterward.",
+    icon: "gauge",
+    build: () => [makeBlock("welcome"), makeBlock("task"), makeBlock("seq"), makeBlock("thankyou")]
+  },
+  abtest: {
+    label: "A/B comparison",
+    description: "Show two interfaces side by side and ask which one participants prefer, and why.",
+    icon: "columns",
+    build: () => [makeBlock("welcome"), makeBlock("abtest"), makeBlock("thankyou")]
+  },
+  blank: {
+    label: "Blank study",
+    description: "Start from scratch and build your own flow.",
+    icon: "wand",
+    build: () => [makeBlock("welcome"), makeBlock("thankyou")]
+  }
+};
+
+function newStudy(templateKey) {
+  const template = STUDY_TEMPLATES[templateKey] || STUDY_TEMPLATES.blank;
+  const study = {
+    id: uid(), title: "Untitled study", description: "",
+    status: "draft", acceptingResponses: true, themeColor: DEFAULT_THEME_HEX,
+    createdAt: Date.now(), updatedAt: Date.now(),
+    blocks: template.build(),
+    responses: []
+  };
+  db.studies[study.id] = study;
+  db.order.unshift(study.id);
+  persist();
+  ui.newStudyModal = false;
+  navigate("#/study/" + study.id + "/edit");
+}
+function duplicateStudy(id) {
+  const src = db.studies[id];
+  const copy = JSON.parse(JSON.stringify(src));
+  copy.id = uid();
+  copy.title = src.title + " (copy)";
+  copy.status = "draft";
+  copy.responses = [];
+  copy.createdAt = copy.updatedAt = Date.now();
+  db.studies[copy.id] = copy;
+  db.order.unshift(copy.id);
+  persist(); render();
+}
+function deleteStudy(id) {
+  if (!confirm("Delete this study and all its responses? This can't be undone.")) return;
+  delete db.studies[id];
+  db.order = db.order.filter(x => x !== id);
+  persist(); render();
+}
+
+/* =========================================================================
+   EVENT DELEGATION
+   ========================================================================= */
+document.addEventListener("click", (e) => {
+  const stopEl = e.target.closest("[data-stop]");
+  const menuTrigger = e.target.closest('[data-action="toggle-card-menu"],[data-action="toggle-add-menu"]');
+  const el = e.target.closest("[data-action]");
+
+  // close open menus/popovers when clicking elsewhere
+  if (!stopEl && !menuTrigger) {
+    if (ui.openMenu !== null) { ui.openMenu = null; render(); }
+  }
+
+  if (!el) return;
+  const action = el.dataset.action;
+
+  switch (action) {
+    /* ---- dashboard ---- */
+    case "open-new-study-modal": ui.newStudyModal = true; render(); break;
+    case "close-new-study-modal": if (e.target === el) { ui.newStudyModal = false; render(); } break;
+    case "create-study": newStudy(el.dataset.template); break;
+    case "toggle-color-scheme": {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      applyColorScheme(isDark ? "light" : "dark");
+      render();
+      break;
+    }
+    case "theme-preset": {
+      const study = currentStudyFromRoute();
+      if (!study) break;
+      const hex = el.dataset.hex;
+      const hsl = hexToHSL(hex);
+      ui.themeHSLDraft = { studyId: study.id, h: hsl.h, s: hsl.s, l: hsl.l };
+      commitThemeColor(study, hex, ui.themeHSLDraft);
+      break;
+    }
+    case "bg-preset": {
+      const study = currentStudyFromRoute();
+      if (!study) break;
+      const hex = el.dataset.hex;
+      const hsl = hexToHSL(hex);
+      ui.bgHSLDraft = { studyId: study.id, h: hsl.h, s: hsl.s, l: hsl.l };
+      commitBgColor(study, hex, ui.bgHSLDraft);
+      break;
+    }
+    case "bg-reset": {
+      const study = currentStudyFromRoute();
+      if (!study) break;
+      resetBgColor(study);
+      break;
+    }
+    case "open-study": navigate("#/study/" + el.dataset.id + "/edit"); break;
+    case "open-results": e.stopPropagation(); ui.openMenu = null; navigate("#/study/" + el.dataset.id + "/results"); break;
+    case "duplicate-study": e.stopPropagation(); ui.openMenu = null; duplicateStudy(el.dataset.id); break;
+    case "delete-study": e.stopPropagation(); ui.openMenu = null; deleteStudy(el.dataset.id); break;
+    case "toggle-card-menu": {
+      e.stopPropagation();
+      ui.openMenu = ui.openMenu === el.dataset.id ? null : el.dataset.id;
+      render();
+      break;
+    }
+
+    /* ---- sharing / sync ---- */
+    case "open-sync": ui.syncModal = true; ui.syncUrlDraft = null; ui.syncMsg = null; ui.scriptCopied = false; render(); break;
+    case "close-sync": if (e.target === el || el.tagName === "BUTTON") { ui.syncModal = false; render(); } break;
+    case "copy-script": {
+      const key = (sync && sync.key) || ui.syncKeyDraft;
+      const done = () => { ui.scriptCopied = true; render(); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(appsScriptCode(key)).then(done).catch(done); else done();
+      break;
+    }
+    case "sync-test": {
+      const url = (ui.syncUrlDraft != null ? ui.syncUrlDraft : (sync ? sync.url : "")).trim();
+      if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(url)) { ui.syncMsg = { ok: false, text: "That doesn't look like a Web app URL (it should end in /exec)." }; render(); break; }
+      ui.syncMsg = { ok: true, text: "Testing…" }; render();
+      apiGet(url, { action: "ping" }).then(r => { ui.syncMsg = r.ok ? { ok: true, text: "Connected ✓" } : { ok: false, text: "The script answered, but not as expected." }; })
+        .catch(() => { ui.syncMsg = { ok: false, text: "Couldn't reach it. Make sure access is set to “Anyone” and you deployed a Web app." }; })
+        .then(render);
+      break;
+    }
+    case "sync-save": {
+      const url = (ui.syncUrlDraft != null ? ui.syncUrlDraft : (sync ? sync.url : "")).trim();
+      if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(url)) { ui.syncMsg = { ok: false, text: "That doesn't look like a Web app URL (it should end in /exec)." }; render(); break; }
+      sync = { url, key: (sync && sync.key) || ui.syncKeyDraft || genAdminKey() };
+      saveSync();
+      syncState.hash = {}; syncState.resp = {};
+      ui.syncMsg = { ok: true, text: "Saved. Published studies are being sent to your sheet." };
+      syncPushDirty(); render();
+      break;
+    }
+    case "sync-disconnect": sync = null; saveSync(); syncState.hash = {}; syncState.status = {}; syncState.resp = {}; ui.syncMsg = { ok: true, text: "Disconnected." }; render(); break;
+    case "resync": { const st = db.studies[el.dataset.id]; if (st) pushStudy(st, true); break; }
+    case "refresh-results": { fetchResponses(el.dataset.id, true); break; }
+    case "share-email": {
+      const st = db.studies[el.dataset.id];
+      const body = "Hi,\n\nI'd really appreciate your help with a short study (" + st.title + "). It takes a few minutes:\n\n" + shareLink(st) + "\n\nThank you!";
+      location.href = "mailto:?subject=" + encodeURIComponent("Quick study: " + st.title) + "&body=" + encodeURIComponent(body);
+      break;
+    }
+    case "share-native": {
+      const st = db.studies[el.dataset.id];
+      navigator.share({ title: st.title, text: "Please take part in this short study:", url: shareLink(st) }).catch(() => {});
+      break;
+    }
+    case "export-backup": {
+      const blob = new Blob([JSON.stringify({ researchkit: 1, studies: db.studies, order: db.order }, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "researchkit-backup-" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      break;
+    }
+    case "import-backup-pick": { const f = document.getElementById("rk-import"); if (f) f.click(); break; }
+    case "import-backup": break;
+    case "retry-submit": {
+      const study = currentStudyFromRoute();
+      if (study && ui.take) submitResponse(study, ui.take);
+      break;
+    }
+
+    /* ---- studio shell ---- */
+    case "goto-tab": navigate("#/study/" + el.dataset.id + "/" + el.dataset.tab); break;
+    case "open-publish": ui.publishModal = el.dataset.id; ui.copied = false; render(); break;
+    case "close-publish": if (e.target === el) { ui.publishModal = null; render(); } break;
+    case "do-publish": {
+      const study = db.studies[el.dataset.id];
+      study.status = "published";
+      study.publishedAt = Date.now();
+      persist(); render();
+      break;
+    }
+    case "toggle-accepting": {
+      const study = db.studies[el.dataset.id];
+      study.acceptingResponses = !study.acceptingResponses;
+      persist(); render();
+      break;
+    }
+    case "copy-link": {
+      const link = el.dataset.link;
+      const done = () => { ui.copied = true; render(); setTimeout(() => { ui.copied = false; render(); }, 1800); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(done).catch(done);
+      else done();
+      break;
+    }
+    case "set-results-tab": ui.resultsTab = el.dataset.tab; render(); break;
+    case "toggle-response": ui.expandedResponse = ui.expandedResponse === el.dataset.id ? null : el.dataset.id; render(); break;
+
+    /* ---- builder: add / manage blocks ---- */
+    case "toggle-add-menu": {
+      e.stopPropagation();
+      ui.openMenu = ui.openMenu === el.dataset.kind ? null : el.dataset.kind;
+      render();
+      break;
+    }
+    case "add-block": {
+      const study = currentStudyFromRoute();
+      const type = el.dataset.type;
+      const meta = BLOCK_REGISTRY[type];
+      ui.openMenu = null;
+      if (meta.singleton && study.blocks.some(b => b.type === type)) {
+        ui.selectedBlockId = study.blocks.find(b => b.type === type).id;
+      } else {
+        const nb = makeBlock(type);
+        study.blocks.push(nb);
+        if (meta.autoFollowWith) study.blocks.push(makeBlock(meta.autoFollowWith));
+        ui.selectedBlockId = nb.id;
+      }
+      study.updatedAt = Date.now();
+      persist(); render();
+      break;
+    }
+    case "select-block": {
+      ui.selectedBlockId = el.closest("[data-block-id]").dataset.blockId;
+      render();
+      break;
+    }
+    case "delete-block": {
+      e.stopPropagation();
+      const study = currentStudyFromRoute();
+      study.blocks = study.blocks.filter(b => b.id !== el.dataset.id);
+      if (ui.selectedBlockId === el.dataset.id) ui.selectedBlockId = null;
+      persist(); render();
+      break;
+    }
+    case "duplicate-block": {
+      e.stopPropagation();
+      const study = currentStudyFromRoute();
+      const idx = study.blocks.findIndex(b => b.id === el.dataset.id);
+      const copy = { id: uid(), type: study.blocks[idx].type, config: JSON.parse(JSON.stringify(study.blocks[idx].config)) };
+      study.blocks.splice(idx + 1, 0, copy);
+      persist(); render();
+      break;
+    }
+    case "move-block": {
+      e.stopPropagation();
+      const study = currentStudyFromRoute();
+      const idx = study.blocks.findIndex(b => b.id === el.dataset.id);
+      const newIdx = idx + parseInt(el.dataset.dir, 10);
+      if (newIdx < 0 || newIdx >= study.blocks.length) break;
+      [study.blocks[idx], study.blocks[newIdx]] = [study.blocks[newIdx], study.blocks[idx]];
+      persist(); render();
+      break;
+    }
+    case "set-field": {
+      if (el.tagName === "BUTTON") {
+        const study = currentStudyFromRoute();
+        const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+        block.config[el.dataset.field] = el.dataset.value;
+        persist(); render();
+      }
+      break;
+    }
+    case "toggle-field": {
+      const study = currentStudyFromRoute();
+      const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+      block.config[el.dataset.field] = !block.config[el.dataset.field];
+      persist(); render();
+      break;
+    }
+    case "demo-remove": {
+      const study = currentStudyFromRoute();
+      const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+      block.config.fields = block.config.fields.filter(f => f.id !== el.dataset.id);
+      persist(); render();
+      break;
+    }
+    case "demo-add": {
+      const study = currentStudyFromRoute();
+      const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+      block.config.fields.push({ id: uid(), label: "New question", type: "text", options: [] });
+      persist(); render();
+      break;
+    }
+    case "demo-type": {
+      const study = currentStudyFromRoute();
+      const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+      block.config.fields.find(f => f.id === el.dataset.id).type = el.dataset.value;
+      persist(); render();
+      break;
+    }
+
+    /* ---- in-builder ephemeral preview ---- */
+    case "open-runner-preview": {
+      ui.runnerPreview = { step: 0, responses: {}, finished: false, modalConfig: null };
+      render();
+      break;
+    }
+    case "close-runner-preview": ui.runnerPreview = null; render(); break;
+    case "run-next": {
+      if (el.disabled) break;
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      if (runner.step < study.blocks.length - 1) runner.step += 1;
+      else runner.finished = true;
+      render();
+      if (runner === ui.take && runner.finished) saveTakeResponse(study, runner);
+      break;
+    }
+    case "consent-toggle": break;
+    case "open-prototype": {
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      const current = study.blocks[runner.step];
+      runner.responses[current.id] = Object.assign({}, runner.responses[current.id], { visited: true });
+      const cfg = current.config;
+      const popupUrl = cfg.sourceType === "embed" ? extractSrcFromEmbed(cfg.embedCode) : cfg.prototypeUrl;
+      if (cfg.openMode === "popup" && popupUrl) {
+        const dims = cfg.deviceType === "mobile" ? "width=400,height=840" : "width=1180,height=800";
+        window.open(popupUrl, "_blank", "noopener," + dims);
+        render();
+      } else {
+        runner.modalConfig = current.config;
+        render();
+      }
+      break;
+    }
+    case "close-modal": {
+      // backdrop click should only close when the backdrop itself was clicked;
+      // the explicit close button should always close, even if its icon was hit.
+      if (el.tagName !== "BUTTON" && e.target !== el) break;
+      activeRunner().modalConfig = null;
+      render();
+      break;
+    }
+    case "abtest-open": {
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      const current = study.blocks[runner.step];
+      const variant = el.dataset.side === "A" ? current.config.variantA : current.config.variantB;
+      runner.modalConfig = { prototypeUrl: variant.url, deviceType: variant.deviceType || "web", sourceType: "url" };
+      render();
+      break;
+    }
+    case "abtest-choose": {
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      const current = study.blocks[runner.step];
+      const prev = runner.responses[current.id] || {};
+      runner.responses[current.id] = Object.assign({}, prev, { choice: el.dataset.value, strength: el.dataset.value === "neutral" ? null : prev.strength });
+      render();
+      break;
+    }
+    case "abtest-strength": {
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      const current = study.blocks[runner.step];
+      const prev = runner.responses[current.id] || {};
+      runner.responses[current.id] = Object.assign({}, prev, { strength: parseInt(el.dataset.value, 10) });
+      render();
+      break;
+    }
+    case "seq-rate": {
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      const current = study.blocks[runner.step];
+      runner.responses[current.id] = parseInt(el.dataset.value, 10);
+      render();
+      break;
+    }
+    case "sus-rate": {
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      const current = study.blocks[runner.step];
+      const vals = runner.responses[current.id] ? runner.responses[current.id].slice() : Array(10).fill(null);
+      vals[parseInt(el.dataset.index, 10)] = parseInt(el.dataset.value, 10);
+      runner.responses[current.id] = vals;
+      render();
+      break;
+    }
+    default: break;
+  }
+});
+
+function activeRunner() { return ui.take || ui.runnerPreview; }
+function currentStudyFromRoute() {
+  const r = parseRoute();
+  if (r.view === "take" && r.api) { const st = syncState.remote[r.id]; return st && st.study; }
+  return db.studies[r.id];
+}
+function saveTakeResponse(study, runner) {
+  const route = parseRoute();
+  if (route.view === "take" && route.api) {
+    runner.pendingResponse = { id: uid(), submittedAt: Date.now(), answers: runner.responses };
+    submitResponse(study, runner);
+    return;
+  }
+  study.responses.push({ id: uid(), submittedAt: Date.now(), answers: runner.responses });
+  study.updatedAt = Date.now();
+  persist();
+}
+function submitResponse(study, runner) {
+  const route = parseRoute();
+  runner.submitState = "sending"; render();
+  apiPost(route.api, { action: "submit", id: study.id, response: runner.pendingResponse })
+    .then(r => { runner.submitState = r.ok ? "ok" : "error"; runner.submitError = r.ok ? null : syncErrorText(r.error); })
+    .catch(() => { runner.submitState = "error"; runner.submitError = "Couldn't reach the server."; })
+    .then(render);
+}
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (!el.matches || !el.matches('[data-action="import-backup"]')) return;
+  const f = el.files && el.files[0];
+  if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => {
+    try {
+      const d = JSON.parse(rd.result);
+      if (!d.studies || !d.order) throw new Error("bad");
+      let n = 0;
+      d.order.forEach(id => { if (!d.studies[id]) return; if (!db.studies[id]) db.order.push(id); db.studies[id] = d.studies[id]; n++; });
+      persist();
+      ui.syncMsg = { ok: true, text: "Imported " + n + " stud" + (n === 1 ? "y" : "ies") + "." };
+    } catch (err) { ui.syncMsg = { ok: false, text: "That file isn't a ResearchKit backup." }; }
+    render();
+  };
+  rd.readAsText(f);
+});
+document.addEventListener("input", (e) => {
+  if (e.target.matches && e.target.matches("[data-sync-url]")) ui.syncUrlDraft = e.target.value;
+});
+
+/* Keeps a live-precision {h,s,l} draft while the researcher is actively
+   dragging a colour picker's sliders, so repeatedly round-tripping through a
+   hex string (which loses sub-integer precision) doesn't make the colour
+   drift as they drag. Reset whenever a different study's picker is opened.
+   Shared by both the accent ("theme") and background ("bg") pickers. */
+function getColorDraft(draftField, study, currentHex) {
+  const draft = ui[draftField];
+  if (!draft || draft.studyId !== study.id) {
+    const hsl = hexToHSL(currentHex);
+    ui[draftField] = { studyId: study.id, h: hsl.h, s: hsl.s, l: hsl.l };
+  }
+  return ui[draftField];
+}
+function getThemeDraft(study) { return getColorDraft("themeHSLDraft", study, study.themeColor || DEFAULT_THEME_HEX); }
+function getBgDraft(study) { return getColorDraft("bgHSLDraft", study, study.bgColor || DEFAULT_BG_HEX); }
+
+function commitThemeColor(study, hex, draft) {
+  study.themeColor = hex;
+  study.updatedAt = Date.now();
+  applyThemeColor(hex);
+  persist();
+  updateColorPickerDOM("theme", hex, draft);
+}
+function commitBgColor(study, hex, draft) {
+  study.bgColor = hex;
+  study.updatedAt = Date.now();
+  applyBackgroundColor(hex);
+  persist();
+  updateColorPickerDOM("bg", hex, draft);
+}
+function resetBgColor(study) {
+  study.bgColor = null;
+  study.updatedAt = Date.now();
+  clearBackgroundOverride();
+  persist();
+  render();
+}
+function updateColorPickerDOM(prefix, hex, draft) {
+  const { h, s, l } = draft;
+  const swatch = root.querySelector(`[data-role="${prefix}-swatch"]`);
+  const hexInput = root.querySelector(`[data-role="${prefix}-hex"]`);
+  const hSlider = root.querySelector(`[data-role="${prefix}-h"]`);
+  const sSlider = root.querySelector(`[data-role="${prefix}-s"]`);
+  const lSlider = root.querySelector(`[data-role="${prefix}-l"]`);
+  if (swatch) swatch.style.background = hex;
+  if (hexInput && document.activeElement !== hexInput) hexInput.value = hex;
+  if (hSlider) { hSlider.value = h; hSlider.style.background = `linear-gradient(to right, hsl(0,${s}%,${l}%), hsl(60,${s}%,${l}%), hsl(120,${s}%,${l}%), hsl(180,${s}%,${l}%), hsl(240,${s}%,${l}%), hsl(300,${s}%,${l}%), hsl(360,${s}%,${l}%))`; }
+  if (sSlider) { sSlider.value = s; sSlider.style.background = `linear-gradient(to right, hsl(${h},0%,${l}%), hsl(${h},100%,${l}%))`; }
+  if (lSlider) { lSlider.value = l; lSlider.style.background = `linear-gradient(to right, hsl(${h},${s}%,0%), hsl(${h},${s}%,50%), hsl(${h},${s}%,100%))`; }
+  const hVal = root.querySelector(`[data-role="${prefix}-h-val"]`); if (hVal) hVal.textContent = h;
+  const sVal = root.querySelector(`[data-role="${prefix}-s-val"]`); if (sVal) sVal.textContent = s + "%";
+  const lVal = root.querySelector(`[data-role="${prefix}-l-val"]`); if (lVal) lVal.textContent = l + "%";
+}
+
+document.addEventListener("input", (e) => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  const action = el.dataset.action;
+  const route = parseRoute();
+
+  switch (action) {
+    case "set-study-title": {
+      const study = db.studies[route.id];
+      if (!study) break;
+      study.title = el.value;
+      const crumb = root.querySelector(".crumbs .current");
+      persist();
+      break;
+    }
+    case "set-study-desc": {
+      const study = db.studies[route.id];
+      if (study) { study.description = el.value; persist(); }
+      break;
+    }
+    case "set-field": {
+      const study = db.studies[route.id];
+      const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+      block.config[el.dataset.field] = el.value;
+      const card = root.querySelector(`.block-card[data-block-id="${block.id}"] .block-summary`);
+      if (card) card.innerHTML = BLOCK_REGISTRY[block.type].summary(block.config);
+      persist();
+      break;
+    }
+    case "set-nested-field": {
+      const study = db.studies[route.id];
+      const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+      setPath(block.config, el.dataset.path, el.value);
+      const card = root.querySelector(`.block-card[data-block-id="${block.id}"] .block-summary`);
+      if (card) card.innerHTML = BLOCK_REGISTRY[block.type].summary(block.config);
+      persist();
+      break;
+    }
+    case "abtest-why": {
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      const current = study.blocks[runner.step];
+      const prev = runner.responses[current.id] || {};
+      runner.responses[current.id] = Object.assign({}, prev, { why: el.value });
+      break;
+    }
+    case "demo-label": {
+      const study = db.studies[route.id];
+      const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+      const f = block.config.fields.find(f => f.id === el.dataset.id);
+      f.label = el.value;
+      const card = root.querySelector(`.block-card[data-block-id="${block.id}"] .block-summary`);
+      if (card) card.innerHTML = BLOCK_REGISTRY[block.type].summary(block.config);
+      persist();
+      break;
+    }
+    case "demo-options": {
+      const study = db.studies[route.id];
+      const block = study.blocks.find(b => b.id === ui.selectedBlockId);
+      const f = block.config.fields.find(f => f.id === el.dataset.id);
+      f.options = el.value.split(",").map(s => s.trim()).filter(Boolean);
+      persist();
+      break;
+    }
+    case "theme-h": case "theme-s": case "theme-l": {
+      const study = db.studies[route.id];
+      if (!study) break;
+      const draft = getThemeDraft(study);
+      const v = parseInt(el.value, 10);
+      if (action === "theme-h") draft.h = v;
+      if (action === "theme-s") draft.s = v;
+      if (action === "theme-l") draft.l = v;
+      commitThemeColor(study, hslToHex(draft.h, draft.s, draft.l), draft);
+      break;
+    }
+    case "theme-hex-input": {
+      const study = db.studies[route.id];
+      if (!study) break;
+      const val = el.value.trim();
+      if (/^#?[0-9a-fA-F]{6}$/.test(val)) {
+        const hex = (val.startsWith("#") ? val : "#" + val).toUpperCase();
+        const hsl = hexToHSL(hex);
+        ui.themeHSLDraft = { studyId: study.id, h: hsl.h, s: hsl.s, l: hsl.l };
+        commitThemeColor(study, hex, ui.themeHSLDraft);
+      }
+      break;
+    }
+    case "bg-h": case "bg-s": case "bg-l": {
+      const study = db.studies[route.id];
+      if (!study) break;
+      const draft = getBgDraft(study);
+      const v = parseInt(el.value, 10);
+      if (action === "bg-h") draft.h = v;
+      if (action === "bg-s") draft.s = v;
+      if (action === "bg-l") draft.l = v;
+      commitBgColor(study, hslToHex(draft.h, draft.s, draft.l), draft);
+      break;
+    }
+    case "bg-hex-input": {
+      const study = db.studies[route.id];
+      if (!study) break;
+      const val = el.value.trim();
+      if (/^#?[0-9a-fA-F]{6}$/.test(val)) {
+        const hex = (val.startsWith("#") ? val : "#" + val).toUpperCase();
+        const hsl = hexToHSL(hex);
+        ui.bgHSLDraft = { studyId: study.id, h: hsl.h, s: hsl.s, l: hsl.l };
+        commitBgColor(study, hex, ui.bgHSLDraft);
+      }
+      break;
+    }
+    case "demo-answer": {
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      const current = study.blocks[runner.step];
+      const vals = Object.assign({}, runner.responses[current.id]);
+      vals[el.dataset.id] = el.value;
+      runner.responses[current.id] = vals;
+      break;
+    }
+    case "openended-answer": {
+      const runner = activeRunner();
+      const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+      const current = study.blocks[runner.step];
+      runner.responses[current.id] = el.value;
+      break;
+    }
+    default: break;
+  }
+});
+
+document.addEventListener("change", (e) => {
+  const el = e.target.closest("[data-action]");
+  if (!el) return;
+  if (el.dataset.action === "consent-toggle") {
+    const runner = activeRunner();
+    const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+    const current = study.blocks[runner.step];
+    runner.responses[current.id] = { agreed: el.checked };
+    render();
+  }
+  if (el.dataset.action === "demo-answer" && el.tagName === "SELECT") {
+    const runner = activeRunner();
+    const study = currentStudyFromRoute() || db.studies[(ui.take||{}).studyId];
+    const current = study.blocks[runner.step];
+    const vals = Object.assign({}, runner.responses[current.id]);
+    vals[el.dataset.id] = el.value;
+    runner.responses[current.id] = vals;
+    render();
+  }
+  if (el.dataset.action === "theme-hex-input" || el.dataset.action === "bg-hex-input") {
+    // normalise the displayed text (e.g. add a leading #) once the field is
+    // committed, without disturbing it while the researcher is still typing
+    el.value = (currentStudyFromRoute() || {})[el.dataset.action === "theme-hex-input" ? "themeColor" : "bgColor"]
+      || el.value;
+  }
+});
+
+/* =========================================================================
+   DRAG & DROP REORDERING (canvas)
+   ========================================================================= */
+let dragFromId = null;
+document.addEventListener("dragstart", (e) => {
+  const card = e.target.closest(".block-card");
+  if (!card) return;
+  dragFromId = card.dataset.blockId;
+  e.dataTransfer.effectAllowed = "move";
+});
+document.addEventListener("dragover", (e) => {
+  const card = e.target.closest(".block-card");
+  if (!card) return;
+  e.preventDefault();
+  root.querySelectorAll(".block-card.drag-over").forEach(c => c.classList.remove("drag-over"));
+  card.classList.add("drag-over");
+});
+document.addEventListener("dragleave", (e) => {
+  const card = e.target.closest(".block-card");
+  if (card) card.classList.remove("drag-over");
+});
+document.addEventListener("drop", (e) => {
+  const card = e.target.closest(".block-card");
+  if (!card || !dragFromId) return;
+  e.preventDefault();
+  const toId = card.dataset.blockId;
+  if (toId !== dragFromId) {
+    const study = currentStudyFromRoute();
+    const blocks = study.blocks;
+    const fromIdx = blocks.findIndex(b => b.id === dragFromId);
+    const toIdx = blocks.findIndex(b => b.id === toId);
+    const [moved] = blocks.splice(fromIdx, 1);
+    blocks.splice(toIdx, 0, moved);
+    persist();
+  }
+  dragFromId = null;
+  render();
+});
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+render();
+</script>
+</body>
+</html>
